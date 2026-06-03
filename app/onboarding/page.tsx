@@ -18,19 +18,30 @@ type Step = 'name' | 'household' | 'preferences'
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, isTestMode } = useAuth()
   const supabase = createSupabaseBrowser()
 
-  const [step, setStep] = useState<Step>('name')
-  const [name, setName] = useState(user?.user_metadata?.full_name || '')
+  // In test mode, household was already created at login — skip to step 2
+  const existingHouseholdId = typeof window !== 'undefined' ? localStorage.getItem('akb_household_id') : null
+  const testName = typeof window !== 'undefined' ? localStorage.getItem('akb_user_name') : null
+  const startStep: Step = (isTestMode && existingHouseholdId) ? 'household' : 'name'
+
+  const [step, setStep] = useState<Step>(startStep)
+  const [name, setName] = useState(user?.user_metadata?.full_name || testName || '')
   const [flatmates, setFlatmates] = useState<{ contact: string }[]>([])
   const [selectedCuisines, setSelectedCuisines] = useState<CuisineType[]>(['tamil', 'north'])
   const [selectedMeals, setSelectedMeals] = useState<MealType[]>(['dinner'])
   const [vegDays, setVegDays] = useState(4)
   const [saving, setSaving] = useState(false)
   const [invitesSent, setInvitesSent] = useState(false)
-  const [householdId, setHhId] = useState<string | null>(null)
+  const [householdId, setHhId] = useState<string | null>(existingHouseholdId)
   const [inviteCode, setInviteCode] = useState<string | null>(null)
+
+  // Fetch invite code for existing household (test mode)
+  if (isTestMode && existingHouseholdId && !inviteCode) {
+    supabase.from('households').select('invite_code').eq('id', existingHouseholdId).single()
+      .then(({ data }) => { if (data?.invite_code) setInviteCode(data.invite_code) })
+  }
 
   function addFlatmate() {
     setFlatmates(prev => [...prev, { contact: '' }])
@@ -45,13 +56,13 @@ export default function OnboardingPage() {
   }
 
   async function handleNameNext() {
-    if (!name.trim() || !user) return
+    if (!name.trim()) return
     setSaving(true)
 
     const { data: household } = await supabase
       .from('households')
       .insert({
-        user_id: user.id,
+        user_id: user?.id || null,
         name: name.trim(),
         default_servings: 2,
         default_cuisines: ['tamil', 'north'],

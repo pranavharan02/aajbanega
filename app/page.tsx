@@ -258,7 +258,7 @@ function Dashboard() {
 }
 
 export default function Home() {
-  const { user, loading } = useAuth()
+  const { user, isTestMode, loading } = useAuth()
 
   if (loading) {
     return (
@@ -268,5 +268,5 @@ export default function Home() {
     )
   }
 
-  return user ? <Dashboard /> : <Landing />
+  return (user || isTestMode) ? <Dashboard /> : <Landing />
 }
