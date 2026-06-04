@@ -41,25 +41,29 @@ export async function middleware(request: NextRequest) {
 
   // Redirect authenticated users without a household to onboarding
   if (user && !isPublic && request.nextUrl.pathname !== '/' && request.nextUrl.pathname !== '/onboarding') {
-    const { data: household } = await supabase
-      .from('households')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!household) {
-      const { data: membership } = await supabase
-        .from('household_members')
-        .select('household_id')
+    try {
+      const { data: household } = await supabase
+        .from('households')
+        .select('id')
         .eq('user_id', user.id)
-        .limit(1)
         .single()
 
-      if (!membership) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/onboarding'
-        return NextResponse.redirect(url)
+      if (!household) {
+        const { data: membership } = await supabase
+          .from('household_members')
+          .select('household_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .single()
+
+        if (!membership) {
+          const url = request.nextUrl.clone()
+          url.pathname = '/onboarding'
+          return NextResponse.redirect(url)
+        }
       }
+    } catch {
+      // If household check fails, let the request through
     }
   }
 

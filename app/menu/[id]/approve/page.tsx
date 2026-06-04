@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { CUISINE_LABELS, DAY_NAMES, MEAL_EMOJI, MEAL_ORDER } from '@/lib/types'
 import type { MenuItem, MealType } from '@/lib/types'
+import Image from 'next/image'
 
 const CUISINE_BG: Record<string, string> = {
   tamil: '#E8D5C4', north: '#F5E6CC', marathi: '#D4E8D4', bihari: '#E8DCC8',
@@ -34,6 +35,12 @@ export default function ApprovePage() {
 
   useEffect(() => {
     async function load() {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (!uuidRegex.test(menuId)) {
+        setLoading(false)
+        return
+      }
+
       const [{ data: menu }, { data: mi }, { data: ap }] = await Promise.all([
         supabase.from('weekly_menus').select('*, household:households(name)').eq('id', menuId).single(),
         supabase.from('menu_items').select('*, dish:dishes(*)').eq('menu_id', menuId).order('day_of_week'),
@@ -141,7 +148,7 @@ export default function ApprovePage() {
                   {hasMultipleMeals && <span className="text-sm">{MEAL_EMOJI[meal_type]}</span>}
                   <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden" style={{ backgroundColor: bg }}>
                     {dish.illustration_url ? (
-                      <img src={dish.illustration_url} alt="" className="w-full h-full object-cover" />
+                      <Image src={dish.illustration_url} alt={dish.name_en} width={40} height={40} className="w-full h-full object-cover" />
                     ) : (
                       <span className="w-full h-full flex items-center justify-center text-sm font-bold opacity-20">{dish.name_en.charAt(0)}</span>
                     )}

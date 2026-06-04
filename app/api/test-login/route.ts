@@ -40,23 +40,38 @@ export async function POST(request: NextRequest) {
   const cleanName = name.trim().slice(0, 100)
   const cleanEmail = email.trim().slice(0, 254).toLowerCase()
 
-  const { data: household, error } = await supabase
+  // Check for existing household with this email
+  const { data: existing } = await supabase
     .from('households')
-    .insert({
-      name: cleanName,
-      email: cleanEmail,
-      default_servings: 2,
-      default_cuisines: ['tamil', 'north'],
-      default_veg_days: 4,
-      preferred_cook_lang: 'hi',
-      default_meals: ['dinner'],
-      onboarding_done: false,
-    })
     .select('id, invite_code')
+    .eq('email', cleanEmail)
+    .limit(1)
     .single()
 
-  if (error || !household) {
-    return NextResponse.json({ error: error?.message || 'Failed to create household' }, { status: 500 })
+  let household: { id: string; invite_code: string }
+
+  if (existing) {
+    household = existing
+  } else {
+    const { data: newHousehold, error } = await supabase
+      .from('households')
+      .insert({
+        name: cleanName,
+        email: cleanEmail,
+        default_servings: 2,
+        default_cuisines: ['tamil', 'north'],
+        default_veg_days: 4,
+        preferred_cook_lang: 'hi',
+        default_meals: ['dinner'],
+        onboarding_done: false,
+      })
+      .select('id, invite_code')
+      .single()
+
+    if (error || !newHousehold) {
+      return NextResponse.json({ error: error?.message || 'Failed to create household' }, { status: 500 })
+    }
+    household = newHousehold
   }
 
   const response = NextResponse.json({ household_id: household.id, invite_code: household.invite_code })

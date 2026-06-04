@@ -82,7 +82,8 @@ export async function ensureHousehold(): Promise<string> {
       await seedCommonInventory(created.id)
       return created.id
     }
-    throw new Error('Failed to create household')
+    console.error('Failed to create household')
+    return ''
   }
 
   // Test mode / unauthenticated: use cookie
@@ -106,7 +107,8 @@ export async function ensureHousehold(): Promise<string> {
     await seedCommonInventory(created.id)
     return created.id
   }
-  throw new Error('Failed to create household')
+  console.error('Failed to create household')
+  return ''
 }
 
 async function seedCommonInventory(householdId: string): Promise<void> {

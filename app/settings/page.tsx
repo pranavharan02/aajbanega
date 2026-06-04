@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const [meals, setMeals] = useState<MealType[]>(['dinner'])
   const [cookLang, setCookLang] = useState('hi')
   const [loading, setLoading] = useState(true)
-  const [saved, setSaved] = useState(false)
+  const [saved, setSaved] = useState<false | 'ok' | 'error'>(false)
 
   useEffect(() => { loadSettings() }, [])
 
@@ -36,14 +36,18 @@ export default function SettingsPage() {
   async function saveSettings() {
     const householdId = getHouseholdId()
     if (!householdId) return
-    await supabase.from('households').update({
+    const { error } = await supabase.from('households').update({
       default_servings: servings,
       default_veg_days: vegDays,
       default_cuisines: cuisines,
       default_meals: meals,
       preferred_cook_lang: cookLang,
     }).eq('id', householdId)
-    setSaved(true)
+    if (error) {
+      setSaved('error')
+    } else {
+      setSaved('ok')
+    }
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -150,9 +154,9 @@ export default function SettingsPage() {
 
         <button
           onClick={saveSettings}
-          className="w-full bg-[#2D2A26] text-white py-3.5 rounded-xl font-medium text-base hover:bg-[#333] transition-colors"
+          className={`w-full py-3.5 rounded-xl font-medium text-base transition-colors ${saved === 'error' ? 'bg-[#C62828] text-white' : 'bg-[#2D2A26] text-white hover:bg-[#333]'}`}
         >
-          {saved ? 'Saved!' : 'Save Settings'}
+          {saved === 'ok' ? 'Saved!' : saved === 'error' ? 'Failed to save' : 'Save Settings'}
         </button>
 
         {/* Add dish link */}

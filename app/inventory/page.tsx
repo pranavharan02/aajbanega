@@ -125,7 +125,8 @@ export default function PantryPage() {
     if (!selectedIngredient || !newQty) return
     const householdId = getHouseholdId()
     if (!householdId) return
-    await supabase.from('inventory').insert({ household_id: householdId, ingredient_id: selectedIngredient.id, quantity: parseFloat(newQty), unit: newUnit })
+    const { error } = await supabase.from('inventory').insert({ household_id: householdId, ingredient_id: selectedIngredient.id, quantity: parseFloat(newQty), unit: newUnit })
+    if (error) { await loadAll(); return }
     setSelectedIngredient(null); setSearch(''); setNewQty(''); setNewUnit('pieces'); setAdding(false)
     toast('Added to pantry')
     await loadAll()
@@ -134,16 +135,19 @@ export default function PantryPage() {
   async function updateQuantity(item: InventoryItem, newQuantity: number) {
     if (newQuantity <= 0) {
       setItems(prev => prev.filter(i => i.id !== item.id))
-      await supabase.from('inventory').delete().eq('id', item.id)
+      const { error } = await supabase.from('inventory').delete().eq('id', item.id)
+      if (error) { await loadAll() }
     } else {
       setItems(prev => prev.map(i => i.id === item.id ? { ...i, quantity: newQuantity } : i))
-      await supabase.from('inventory').update({ quantity: newQuantity, updated_at: new Date().toISOString() }).eq('id', item.id)
+      const { error } = await supabase.from('inventory').update({ quantity: newQuantity, updated_at: new Date().toISOString() }).eq('id', item.id)
+      if (error) { await loadAll() }
     }
   }
 
   async function removeItem(item: InventoryItem) {
     setItems(prev => prev.filter(i => i.id !== item.id))
-    await supabase.from('inventory').delete().eq('id', item.id)
+    const { error } = await supabase.from('inventory').delete().eq('id', item.id)
+    if (error) { await loadAll() }
   }
 
   // --- Shopping list functions ---
@@ -152,7 +156,8 @@ export default function PantryPage() {
     if (!item || !menuId) return
     const newVal = !item.purchased
     setShopItems(prev => prev.map(i => i.ingredientId === ingredientId ? { ...i, purchased: newVal } : i))
-    await supabase.from('shopping_lists').update({ is_purchased: newVal }).eq('ingredient_id', ingredientId).eq('menu_id', menuId)
+    const { error } = await supabase.from('shopping_lists').update({ is_purchased: newVal }).eq('ingredient_id', ingredientId).eq('menu_id', menuId)
+    if (error) { await loadAll() }
   }
 
   function isDayPast(dateStr: string): boolean {

@@ -13,6 +13,23 @@ export async function POST(
   const { id: menuId } = await params
 
   try {
+    // Idempotency: check if already finalized
+    const { data: existingMenu } = await supabase
+      .from('weekly_menus')
+      .select('household_id, is_finalized')
+      .eq('id', menuId)
+      .single()
+
+    if (existingMenu?.is_finalized) {
+      return NextResponse.json({ message: 'Already finalized' }, { status: 200 })
+    }
+
+    // IDOR check: verify caller owns this menu
+    const householdCookie = request.cookies.get('akb_household')?.value
+    if (!householdCookie || existingMenu?.household_id !== householdCookie) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     // Get all menu items with dish ingredients
     const { data: menuItems } = await supabase
       .from('menu_items')

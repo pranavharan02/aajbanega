@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { CUISINE_LABELS, ACCOMPANIMENT_LABELS } from '@/lib/types'
 import type { Dish, DishIngredient, RecipeStep, Language } from '@/lib/types'
+import Image from 'next/image'
 
 export default function DishDetailPage() {
   const params = useParams()
@@ -17,27 +18,31 @@ export default function DishDetailPage() {
   const [steps, setSteps] = useState<RecipeStep[]>([])
   const [lang, setLang] = useState<Language>('en')
   const [servings, setServings] = useState(2)
+  const [notFound, setNotFound] = useState(false)
 
   useEffect(() => { loadDish() }, [slug])
 
   async function loadDish() {
     const { data: d } = await supabase.from('dishes').select('*').eq('slug', slug).single()
-    if (d) {
-      setDish(d)
-      setServings(d.default_servings)
+    if (!d) {
+      setNotFound(true)
+      return
     }
+    setDish(d)
+    setServings(d.default_servings)
 
-    const { data: ing } = await supabase
-      .from('dish_ingredients')
-      .select('*, ingredient:ingredients(*)')
-      .eq('dish_id', d?.id)
+    const [{ data: ing }, { data: st }] = await Promise.all([
+      supabase
+        .from('dish_ingredients')
+        .select('*, ingredient:ingredients(*)')
+        .eq('dish_id', d.id),
+      supabase
+        .from('recipe_steps')
+        .select('*')
+        .eq('dish_id', d.id)
+        .order('step_number'),
+    ])
     setIngredients(ing || [])
-
-    const { data: st } = await supabase
-      .from('recipe_steps')
-      .select('*')
-      .eq('dish_id', d?.id)
-      .order('step_number')
     setSteps(st || [])
   }
 
@@ -64,6 +69,13 @@ export default function DishDetailPage() {
 
   const scaleFactor = dish ? servings / dish.default_servings : 1
 
+  if (notFound) return (
+    <div className="py-20 text-center">
+      <p className="text-[#8C8680] text-lg mb-4">Dish not found</p>
+      <Link href={`/menu/${menuId}`} className="text-sm text-[#8C8680] hover:text-[#2D2A26]">&larr; Back to menu</Link>
+    </div>
+  )
+
   if (!dish) return <div className="py-20 text-center text-[#8C8680]">Loading...</div>
 
   return (
@@ -79,7 +91,7 @@ export default function DishDetailPage() {
           style={{ backgroundColor: dish.cuisine === 'tamil' ? '#E8D5C4' : dish.cuisine === 'north' ? '#F5E6CC' : dish.cuisine === 'marathi' ? '#D4E8D4' : '#E8DCC8' }}
         >
           {dish.illustration_url ? (
-            <img src={dish.illustration_url} alt={dish.name_en} className="w-full h-full object-cover" />
+            <Image src={dish.illustration_url} alt={dish.name_en} width={96} height={96} className="w-full h-full object-cover" />
           ) : (
             <span className="w-full h-full flex items-center justify-center text-3xl font-bold opacity-20">{dish.name_en.charAt(0)}</span>
           )}

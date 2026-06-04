@@ -40,22 +40,20 @@ export async function generateMenuAlgorithmic(options: GenerateOptions): Promise
     const vegPool = shuffle(eligible.filter(d => d.is_veg))
     const nvPool = shuffle(eligible.filter(d => !d.is_veg))
 
-    let vegIdx = 0
-    let nvIdx = 0
-
     for (let day = 0; day < 7; day++) {
       const isVegDay = day < vegDays
       let pick: typeof allDishes[0] | undefined
 
       if (isVegDay) {
-        pick = vegPool[vegIdx % vegPool.length]
-        vegIdx++
+        // Prefer unused veg dishes; fall back to any veg dish only if none remain
+        const unusedVeg = vegPool.filter(d => !usedSlugs.has(d.slug))
+        pick = unusedVeg.length > 0 ? unusedVeg[0] : vegPool[0]
       } else if (nvPool.length > 0) {
-        pick = nvPool[nvIdx % nvPool.length]
-        nvIdx++
+        const unusedNv = nvPool.filter(d => !usedSlugs.has(d.slug))
+        pick = unusedNv.length > 0 ? unusedNv[0] : nvPool[0]
       } else {
-        pick = vegPool[vegIdx % vegPool.length]
-        vegIdx++
+        const unusedVeg = vegPool.filter(d => !usedSlugs.has(d.slug))
+        pick = unusedVeg.length > 0 ? unusedVeg[0] : vegPool[0]
       }
 
       if (pick) {

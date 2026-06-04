@@ -8,6 +8,7 @@ import { getMonday, formatDate, formatDateDisplay, getWeekLabel, shiftWeekStart 
 import type { WeeklyMenu, MenuItem } from '@/lib/types'
 import { CUISINE_LABELS, DAY_NAMES, MEAL_EMOJI } from '@/lib/types'
 import { useAuth } from '@/components/AuthProvider'
+import Image from 'next/image'
 
 const CUISINE_BG: Record<string, string> = {
   tamil: '#E8D5C4', north: '#F5E6CC', marathi: '#D4E8D4', bihari: '#E8DCC8',
@@ -252,31 +253,38 @@ function Dashboard() {
   const [menu, setMenu] = useState<WeeklyMenu | null>(null)
   const [items, setItems] = useState<MenuItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [weekStart, setWeekStart] = useState(() => formatDate(getMonday()))
 
   const loadMenu = useCallback(async () => {
-    setLoading(true)
-    await ensureHousehold()
-    const householdId = getHouseholdId()
-    if (!householdId) { setLoading(false); return }
+    try {
+      setLoading(true)
+      setError(false)
+      await ensureHousehold()
+      const householdId = getHouseholdId()
+      if (!householdId) { setLoading(false); return }
 
-    const { data: menus } = await supabase
-      .from('weekly_menus')
-      .select('*, menu_items:menu_items(*, dish:dishes(*))')
-      .eq('household_id', householdId)
-      .eq('week_start_date', weekStart)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      const { data: menus } = await supabase
+        .from('weekly_menus')
+        .select('*, menu_items:menu_items(*, dish:dishes(*))')
+        .eq('household_id', householdId)
+        .eq('week_start_date', weekStart)
+        .order('created_at', { ascending: false })
+        .limit(1)
 
-    if (menus && menus.length > 0) {
-      const m = menus[0]
-      setMenu(m)
-      setItems(m.menu_items || [])
-    } else {
-      setMenu(null)
-      setItems([])
+      if (menus && menus.length > 0) {
+        const m = menus[0]
+        setMenu(m)
+        setItems(m.menu_items || [])
+      } else {
+        setMenu(null)
+        setItems([])
+      }
+      setLoading(false)
+    } catch {
+      setError(true)
+      setLoading(false)
     }
-    setLoading(false)
   }, [weekStart])
 
   useEffect(() => { loadMenu() }, [loadMenu])
@@ -303,7 +311,17 @@ function Dashboard() {
         </button>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div className="card p-8 text-center">
+          <p className="text-[17px] font-semibold text-[#2D2A26] mb-4">Couldn&apos;t load your menu</p>
+          <button
+            onClick={() => loadMenu()}
+            className="bg-[#2D2A26] text-white px-6 py-3 rounded-xl font-medium text-[15px] hover:bg-[#45403A] transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      ) : loading ? (
         <div className="space-y-4">
           {[1,2,3].map(i => (
             <div key={i} className="card p-5 animate-pulse">
@@ -340,7 +358,7 @@ function Dashboard() {
                 <Link key={item.id} href={`/menu/${menu.id}`} className="card p-4 flex gap-4 block">
                   <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden" style={{ backgroundColor: bg }}>
                     {dish.illustration_url ? (
-                      <img src={dish.illustration_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      <Image src={dish.illustration_url} alt={dish.name_en} width={64} height={64} className="w-full h-full object-cover" />
                     ) : (
                       <span className="w-full h-full flex items-center justify-center text-2xl font-bold opacity-20">{dish.name_en.charAt(0)}</span>
                     )}

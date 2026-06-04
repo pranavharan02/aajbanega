@@ -67,6 +67,14 @@ export async function GET(
   { params }: { params: Promise<{ menuId: string }> }
 ) {
   const { menuId } = await params
+
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!uuidRegex.test(menuId)) {
+    const errHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${CSS}</style></head><body><div class="c"><div class="card" style="text-align:center;padding:40px 20px;margin-top:40px"><div style="font-size:36px;margin-bottom:12px">🤔</div><div style="font-size:22px;font-weight:600">This link doesn't seem right.</div></div></div></body></html>`
+    return new Response(errHtml, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+  }
+
   const sp = request.nextUrl.searchParams
   const lang = sp.get('lang') === 'mr' ? 'mr' : 'hi'
   const dp = sp.get('day')
@@ -78,12 +86,13 @@ export async function GET(
   const mealLabels = lang === 'mr' ? MEAL_MR : MEAL_HI
   const isWeekView = vp === 'week'
 
-  const [{ data: menuItems }, { data: shopItems }] = await Promise.all([
+  const [{ data: menuItems, error: menuError }, { data: shopItems }] = await Promise.all([
     supabase.from('menu_items').select('*, dish:dishes(*)').eq('menu_id', menuId).order('day_of_week'),
     supabase.from('shopping_lists').select('*, ingredient:ingredients(*)').eq('menu_id', menuId),
   ])
-  if (!menuItems?.length) {
-    return new Response('Not found', { status: 404 })
+  if (menuError || !menuItems?.length) {
+    const errHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${CSS}</style></head><body><div class="c"><div class="card" style="text-align:center;padding:40px 20px;margin-top:40px"><div style="font-size:36px;margin-bottom:12px">🤔</div><div style="font-size:22px;font-weight:600">This link doesn't seem right.</div></div></div></body></html>`
+    return new Response(errHtml, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
   }
 
   const today = new Date()

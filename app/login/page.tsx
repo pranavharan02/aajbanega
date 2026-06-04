@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [name, setName] = useState('')
@@ -16,28 +17,34 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const res = await fetch('/api/test-login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.trim(), email: email.trim() }),
-    })
+    try {
+      const res = await fetch('/api/test-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), email: email.trim() }),
+      })
 
-    const data = await res.json()
-    if (data.error) {
-      setError(data.error)
+      const data = await res.json()
+      if (data.error) {
+        setError(data.error)
+        setLoading(false)
+        return
+      }
+
+      // Set cookies in document.cookie immediately so they're available
+      // before the next page's useEffect runs (API Set-Cookie headers may
+      // not be reflected in document.cookie fast enough for client-side reads)
+      if (data.household_id) {
+        document.cookie = `akb_household=${encodeURIComponent(data.household_id)}; path=/; max-age=${60*60*24*365}; samesite=lax`
+        document.cookie = `akb_test_mode=true; path=/; max-age=${60*60*24*365}; samesite=lax`
+      }
+
+      const next = searchParams.get('next') || '/onboarding'
+      router.push(next)
+    } catch {
+      setError('Network error. Please check your connection.')
       setLoading(false)
-      return
     }
-
-    // Set cookies in document.cookie immediately so they're available
-    // before the next page's useEffect runs (API Set-Cookie headers may
-    // not be reflected in document.cookie fast enough for client-side reads)
-    if (data.household_id) {
-      document.cookie = `akb_household=${encodeURIComponent(data.household_id)}; path=/; max-age=${60*60*24*365}; samesite=lax`
-      document.cookie = `akb_test_mode=true; path=/; max-age=${60*60*24*365}; samesite=lax`
-    }
-
-    router.push('/onboarding')
   }
 
   function handleGoogleLogin() {
@@ -105,5 +112,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F5F0EA' }}>
+        <div className="w-8 h-8 border-3 border-[#2D2A26] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
