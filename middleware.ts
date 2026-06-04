@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
   const isTestMode = request.cookies.get('akb_test_mode')?.value === 'true'
   const hasHousehold = !!request.cookies.get('akb_household')?.value
 
-  const publicPaths = ['/login', '/cook/', '/auth/callback', '/api/', '/join/', '/onboarding']
+  const publicPaths = ['/login', '/cook/', '/auth/callback', '/api/', '/join/', '/onboarding', '/privacy', '/terms']
   const isPublic = publicPaths.some(p => request.nextUrl.pathname.startsWith(p))
 
   // Allow through if: authenticated, test-mode, public path, or landing page

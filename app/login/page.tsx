@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 function LoginForm() {
@@ -10,6 +10,14 @@ function LoginForm() {
   const [error, setError] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+
+  useEffect(() => {
+    const testMode = document.cookie.includes('akb_test_mode=true')
+    const household = document.cookie.includes('akb_household=')
+    if (testMode && household) {
+      router.replace(searchParams.get('next') || '/')
+    }
+  }, [router, searchParams])
 
   async function handleTestLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -31,12 +39,10 @@ function LoginForm() {
         return
       }
 
-      // Set cookies in document.cookie immediately so they're available
-      // before the next page's useEffect runs (API Set-Cookie headers may
-      // not be reflected in document.cookie fast enough for client-side reads)
       if (data.household_id) {
-        document.cookie = `akb_household=${encodeURIComponent(data.household_id)}; path=/; max-age=${60*60*24*365}; samesite=lax`
-        document.cookie = `akb_test_mode=true; path=/; max-age=${60*60*24*365}; samesite=lax`
+        const secure = window.location.protocol === 'https:' ? '; secure' : ''
+        document.cookie = `akb_household=${encodeURIComponent(data.household_id)}; path=/; max-age=${60*60*24*365}; samesite=lax${secure}`
+        document.cookie = `akb_test_mode=true; path=/; max-age=${60*60*24*365}; samesite=lax${secure}`
       }
 
       const next = searchParams.get('next') || '/onboarding'
