@@ -91,7 +91,7 @@ function Landing() {
             href="/login"
             className="inline-block bg-[#2D2A26] text-white px-10 py-4 rounded-2xl font-semibold text-[18px] hover:bg-[#45403A] transition-all hover:scale-[1.03] shadow-lg active:scale-100"
           >
-            Start Planning — Free
+            Start Planning
           </Link>
         </div>
       </div>
@@ -227,7 +227,7 @@ function Landing() {
             href="/login"
             className="inline-block bg-[#2D2A26] text-white px-10 py-4 rounded-2xl font-semibold text-[18px] hover:bg-[#45403A] transition-all hover:scale-[1.03] shadow-lg active:scale-100"
           >
-            Start Planning — Free
+            Start Planning
           </Link>
           <p className="text-[13px] text-[#C5C0BA] mt-4">No credit card. No downloads. Works on any phone.</p>
         </div>
