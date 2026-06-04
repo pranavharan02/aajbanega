@@ -32,14 +32,23 @@ export default function MenuCalendarPage() {
   const [finalizing, setFinalizing] = useState(false)
   const [showShareOptions, setShowShareOptions] = useState(false)
   const [swapSource, setSwapSource] = useState<string | null>(null)
+  const [approvals, setApprovals] = useState<{ approved_by: string }[]>([])
+  const [memberCount, setMemberCount] = useState(1)
+  const [pendingApproval, setPendingApproval] = useState(false)
 
   const loadMenu = useCallback(async () => {
-    const [{ data: m }, { data: mi }] = await Promise.all([
-      supabase.from('weekly_menus').select('*').eq('id', menuId).single(),
+    const [{ data: m }, { data: mi }, { data: ap }] = await Promise.all([
+      supabase.from('weekly_menus').select('*, household:households(id, name)').eq('id', menuId).single(),
       supabase.from('menu_items').select('*, dish:dishes(*)').eq('menu_id', menuId).order('day_of_week'),
+      supabase.from('menu_approvals').select('approved_by').eq('menu_id', menuId),
     ])
     setMenu(m)
     setItems(mi || [])
+    setApprovals(ap || [])
+    if (m) {
+      setMemberCount(m.approvals_needed || 1)
+      setPendingApproval(!m.is_finalized && (ap?.length || 0) > 0 && (ap?.length || 0) < (m.approvals_needed || 1))
+    }
     setLoading(false)
   }, [menuId])
 
@@ -105,21 +114,61 @@ export default function MenuCalendarPage() {
   }
 
   async function handleFinalize() {
-    if (!confirm('Lock this menu for the week?')) return
     setFinalizing(true)
-    await supabase.from('weekly_menus').update({ is_finalized: true, finalized_at: new Date().toISOString() }).eq('id', menuId)
-    await fetch(`/api/menus/${menuId}/finalize`, { method: 'POST' })
+
+    // Get household member count
+    const hhId = menu?.household_id
+    let totalMembers = 1
+    if (hhId) {
+      const { count } = await supabase.from('household_members').select('id', { count: 'exact', head: true }).eq('household_id', hhId)
+      totalMembers = 1 + (count || 0) // owner + members
+    }
+
+    // Record this user's approval
+    const myName = (typeof document !== 'undefined' && document.cookie.match(/akb_household=/)
+      ? ((await supabase.from('households').select('name').eq('id', hhId).single()).data?.name || 'You')
+      : 'You')
+
+    await supabase.from('menu_approvals').upsert({
+      menu_id: menuId,
+      approved_by: myName,
+    }, { onConflict: 'menu_id,approved_by' })
+
+    // Update approvals_needed
+    await supabase.from('weekly_menus').update({ approvals_needed: totalMembers }).eq('id', menuId)
+
+    if (totalMembers <= 1) {
+      // Solo household — finalize immediately
+      await supabase.from('weekly_menus').update({ is_finalized: true, finalized_at: new Date().toISOString() }).eq('id', menuId)
+      await fetch(`/api/menus/${menuId}/finalize`, { method: 'POST' })
+      toast('Menu finalized!')
+      setShowShareOptions(true)
+    } else {
+      toast('Your approval recorded! Share the link with your flatmate(s).')
+    }
+
     await loadMenu()
     setFinalizing(false)
-    setShowShareOptions(true)
-    toast('Menu finalized!')
   }
 
   async function handleUnfinalize() {
     await supabase.from('weekly_menus').update({ is_finalized: false, finalized_at: null }).eq('id', menuId)
+    await supabase.from('menu_approvals').delete().eq('menu_id', menuId)
     await loadMenu()
     setShowShareOptions(false)
-    toast('Menu unlocked')
+    toast('Menu unlocked, approvals cleared')
+  }
+
+  function copyApprovalLink() {
+    const url = `${window.location.origin}/menu/${menuId}/approve`
+    navigator.clipboard.writeText(url)
+    toast('Approval link copied!')
+  }
+
+  function shareApprovalWhatsApp() {
+    const url = `${window.location.origin}/menu/${menuId}/approve`
+    const msg = `Hey! Please review and approve this week's menu:\n${url}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
   async function handleReset() {
@@ -260,11 +309,44 @@ export default function MenuCalendarPage() {
       </div>
 
       {/* Actions */}
-      {!menu.is_finalized ? (
+      {!menu.is_finalized && !pendingApproval ? (
         <button onClick={handleFinalize} disabled={finalizing}
           className="w-full bg-[#2D2A26] text-white py-4 rounded-2xl font-semibold text-[17px] hover:bg-[#45403A] transition-colors disabled:opacity-50 shadow-sm">
-          {finalizing ? 'Finalizing...' : 'Finalize Menu'}
+          {finalizing ? 'Processing...' : 'Finalize Menu'}
         </button>
+      ) : pendingApproval ? (
+        <div className="space-y-4">
+          {/* Approval status */}
+          <div className="card p-5 space-y-3">
+            <p className="font-semibold text-[17px] text-[#2D2A26]">Waiting for approval</p>
+            <div className="flex flex-wrap gap-2">
+              {approvals.map(a => (
+                <span key={a.approved_by} className="px-3 py-1.5 rounded-full bg-[#2E7D32] text-white text-[13px] font-medium">
+                  {a.approved_by} ✓
+                </span>
+              ))}
+              {Array.from({ length: memberCount - approvals.length }).map((_, i) => (
+                <span key={i} className="px-3 py-1.5 rounded-full bg-[#F5F0EA] text-[#8C8680] text-[13px] font-medium">
+                  Pending
+                </span>
+              ))}
+            </div>
+            <p className="text-[13px] text-[#8C8680]">
+              {approvals.length} of {memberCount} approved. Share the link below so your flatmate can review and approve.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={copyApprovalLink}
+              className="flex-1 bg-[#2D2A26] text-white py-4 rounded-2xl font-semibold text-[15px] hover:bg-[#45403A] transition-colors shadow-sm">
+              Copy Approval Link
+            </button>
+            <button onClick={shareApprovalWhatsApp}
+              className="flex-1 bg-[#25D366] text-white py-4 rounded-2xl font-semibold text-[15px] hover:bg-[#20BD5A] transition-colors shadow-sm flex items-center justify-center gap-2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492l4.571-1.46A11.93 11.93 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.37 0-4.554-.804-6.298-2.152l-.44-.348-2.713.867.91-2.631-.382-.464A9.935 9.935 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
+              WhatsApp
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="space-y-4">
           {showShareOptions && (
@@ -276,6 +358,15 @@ export default function MenuCalendarPage() {
                 <button onClick={() => copyCookLink('mr')}
                   className="flex-1 bg-[#F5F0EA] py-3 rounded-xl text-[15px] font-medium hover:bg-[#F0EDE8] transition-colors">Copy Marathi link</button>
               </div>
+            </div>
+          )}
+          {approvals.length > 0 && (
+            <div className="flex flex-wrap gap-2 justify-center">
+              {approvals.map(a => (
+                <span key={a.approved_by} className="px-3 py-1 rounded-full bg-[#2E7D32] text-white text-[12px] font-medium">
+                  {a.approved_by} ✓
+                </span>
+              ))}
             </div>
           )}
           <div className="flex gap-3">
