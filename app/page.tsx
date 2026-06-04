@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { ensureHousehold, getHouseholdId } from '@/lib/household'
@@ -15,101 +15,228 @@ const CUISINE_BG: Record<string, string> = {
   goan: '#D4D8E8', rajasthani: '#E8E0C8', punjabi: '#F0E4CC', kashmiri: '#D8D4E8',
 }
 
+function useReveal() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect() } }, { threshold: 0.15 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+  return { ref, visible }
+}
+
+function Reveal({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const { ref, visible } = useReveal()
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(32px)',
+        transition: `opacity 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}s, transform 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}s`,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+const FEATURES = [
+  {
+    num: '01',
+    title: 'Your weekly menu, sorted',
+    desc: 'Pick your favourite cuisines, set how many veg and non-veg days you want, and get a balanced weekly menu — breakfast, lunch, and dinner. 213 dishes across 12 regional Indian cuisines.',
+    accent: '#E8D5C4',
+    icon: '📋',
+  },
+  {
+    num: '02',
+    title: 'Share recipes with your cook',
+    desc: 'Send your cook a single link. They see today\'s recipe in Hindi or Marathi — ingredients, quantities, step-by-step instructions — in large, clear text. No app download needed.',
+    accent: '#D4E8D4',
+    icon: '🗣️',
+  },
+  {
+    num: '03',
+    title: 'Smart shopping list',
+    desc: 'The app tracks what\'s already in your pantry and builds a day-wise shopping list with only what you need to buy. No more forgetting jeera or buying double the onions.',
+    accent: '#F5E6CC',
+    icon: '🛒',
+  },
+]
+
 function Landing() {
   return (
-    <div className="py-10">
+    <div className="landing-page">
       {/* Hero */}
-      <div className="text-center mb-16">
-        <h1 className="text-[44px] font-extrabold text-[#2D2A26] leading-[1.1] tracking-tight mb-4">
+      <div className="text-center pt-12 pb-6">
+        <h1
+          className="text-[52px] font-extrabold text-[#2D2A26] leading-[1.05] tracking-tight mb-5"
+          style={{ animation: 'heroIn 0.8s cubic-bezier(0.16,1,0.3,1) both' }}
+        >
           आज क्या बनेगा?
         </h1>
-        <p className="text-[20px] text-[#8C8680] leading-relaxed max-w-md mx-auto mb-10">
+        <p
+          className="text-[20px] text-[#8C8680] leading-relaxed max-w-sm mx-auto mb-10"
+          style={{ animation: 'heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.15s both' }}
+        >
           Plan meals for the week.<br />Share with your cook. In their language.
         </p>
-        <Link
-          href="/login"
-          className="inline-block bg-[#2D2A26] text-white px-10 py-4 rounded-2xl font-semibold text-[18px] hover:bg-[#45403A] transition-colors shadow-lg"
-        >
-          Start Planning — Free
-        </Link>
+        <div style={{ animation: 'heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s both' }}>
+          <Link
+            href="/login"
+            className="inline-block bg-[#2D2A26] text-white px-10 py-4 rounded-2xl font-semibold text-[18px] hover:bg-[#45403A] transition-all hover:scale-[1.03] shadow-lg active:scale-100"
+          >
+            Start Planning — Free
+          </Link>
+        </div>
       </div>
 
-      {/* Value props */}
-      <div className="space-y-4 mb-16">
-        {[
-          {
-            emoji: '🤖',
-            title: 'AI picks your menu',
-            desc: 'Cuisine-aware, variety-optimized weekly menus across 12 Indian cuisines. Breakfast, lunch, dinner.',
-          },
-          {
-            emoji: '🗣️',
-            title: 'Recipes in Hindi & Marathi',
-            desc: 'One-tap share with your cook. They see today\'s recipe in their language with large, clear text.',
-          },
-          {
-            emoji: '🛒',
-            title: 'Auto shopping list',
-            desc: 'Knows what you have in your pantry, lists exactly what to buy — organized by day.',
-          },
-        ].map((prop) => (
-          <div key={prop.title} className="card p-6 flex gap-5 items-start">
-            <span className="text-3xl flex-shrink-0 mt-0.5">{prop.emoji}</span>
-            <div>
-              <h3 className="font-bold text-[18px] text-[#2D2A26] mb-1">{prop.title}</h3>
-              <p className="text-[15px] text-[#8C8680] leading-relaxed">{prop.desc}</p>
-            </div>
+      {/* Scroll indicator */}
+      <div className="flex justify-center py-10" style={{ animation: 'fadeIn 1s 1.2s both' }}>
+        <div className="w-6 h-10 rounded-full border-2 border-[#C5C0BA] flex justify-center pt-2">
+          <div className="w-1.5 h-3 rounded-full bg-[#C5C0BA] animate-bounce" />
+        </div>
+      </div>
+
+      {/* === Sticky scroll feature cards === */}
+      <div className="relative" style={{ marginLeft: '-20px', marginRight: '-20px' }}>
+        {FEATURES.map((f, i) => (
+          <div key={f.num} className="sticky px-5" style={{ top: `${100 + i * 16}px`, zIndex: i + 1, paddingBottom: '24px' }}>
+            <Reveal>
+              <div
+                className="rounded-3xl p-8 shadow-lg border border-white/60"
+                style={{ background: f.accent, minHeight: '280px' }}
+              >
+                <div className="flex items-start justify-between mb-5">
+                  <span className="text-[13px] font-bold text-[#2D2A26]/40 tracking-widest uppercase">{f.num}</span>
+                  <span className="text-4xl">{f.icon}</span>
+                </div>
+                <h3 className="text-[28px] font-extrabold text-[#2D2A26] leading-tight mb-3">{f.title}</h3>
+                <p className="text-[16px] text-[#2D2A26]/70 leading-relaxed max-w-md">{f.desc}</p>
+              </div>
+            </Reveal>
           </div>
         ))}
       </div>
 
-      {/* How it works */}
-      <div className="mb-16">
-        <h2 className="text-[22px] font-bold text-[#2D2A26] mb-6 text-center">How it works</h2>
-        <div className="space-y-3">
-          {[
-            { step: '1', text: 'Pick your cuisines and set veg/non-veg days' },
-            { step: '2', text: 'AI generates a balanced weekly menu' },
-            { step: '3', text: 'Swap dishes, finalize, and share with your cook' },
-            { step: '4', text: 'Your cook opens the link — recipes in Hindi or Marathi' },
-          ].map((s) => (
-            <div key={s.step} className="flex gap-4 items-center">
-              <div className="w-10 h-10 rounded-xl bg-[#2D2A26] text-white flex items-center justify-center font-bold text-[16px] flex-shrink-0">
-                {s.step}
+      {/* === Plan together === */}
+      <div className="py-20">
+        <Reveal>
+          <h2 className="text-[28px] font-extrabold text-[#2D2A26] text-center leading-tight mb-4">
+            Plan together with<br />flatmates & family
+          </h2>
+          <p className="text-[16px] text-[#8C8680] text-center max-w-sm mx-auto mb-10 leading-relaxed">
+            Everyone gets a say in what&apos;s for dinner. No more WhatsApp polls.
+          </p>
+        </Reveal>
+
+        <div className="space-y-4">
+          <Reveal delay={0.1}>
+            <div className="card p-6">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="w-10 h-10 rounded-full bg-[#E8D5C4] flex items-center justify-center text-lg font-bold">👥</div>
+                <h3 className="font-bold text-[17px] text-[#2D2A26]">Invite your household</h3>
               </div>
-              <p className="text-[16px] text-[#2D2A26]">{s.text}</p>
+              <p className="text-[15px] text-[#8C8680] leading-relaxed">
+                Add flatmates or family members with a WhatsApp invite link. Each person joins your shared household in seconds.
+              </p>
             </div>
-          ))}
+          </Reveal>
+
+          <Reveal delay={0.2}>
+            <div className="card p-6">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="w-10 h-10 rounded-full bg-[#D4E8D4] flex items-center justify-center text-lg font-bold">✅</div>
+                <h3 className="font-bold text-[17px] text-[#2D2A26]">Vote on the menu</h3>
+              </div>
+              <p className="text-[15px] text-[#8C8680] leading-relaxed">
+                After the menu is generated, each flatmate gets a link to review and approve. The menu finalizes only when everyone says yes.
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.3}>
+            <div className="card p-6">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="w-10 h-10 rounded-full bg-[#F5E6CC] flex items-center justify-center text-lg font-bold">🔄</div>
+                <h3 className="font-bold text-[17px] text-[#2D2A26]">Swap dishes you don&apos;t like</h3>
+              </div>
+              <p className="text-[15px] text-[#8C8680] leading-relaxed">
+                Not feeling Palak Paneer on Wednesday? Swap it for something else from the same cuisine. Everyone sees the updated menu in real-time.
+              </p>
+            </div>
+          </Reveal>
         </div>
       </div>
 
-      {/* Cuisines */}
-      <div className="mb-16">
-        <h2 className="text-[22px] font-bold text-[#2D2A26] mb-6 text-center">12 regional cuisines</h2>
-        <div className="flex flex-wrap gap-2 justify-center">
-          {['Tamil', 'North Indian', 'Marathi', 'Bihari', 'Goan', 'Rajasthani', 'Gujarati', 'Bengali', 'Kerala', 'Andhra', 'Punjabi', 'Kashmiri'].map((c) => (
-            <span key={c} className="px-4 py-2 rounded-full bg-white text-[14px] font-medium text-[#2D2A26] shadow-sm">
-              {c}
-            </span>
-          ))}
+      {/* === How it works === */}
+      <Reveal>
+        <div className="py-10">
+          <h2 className="text-[22px] font-bold text-[#2D2A26] mb-8 text-center">How it works</h2>
+          <div className="space-y-5">
+            {[
+              { step: '1', text: 'Pick your cuisines and set veg/non-veg days', sub: 'Tamil, North Indian, Marathi... choose any combination' },
+              { step: '2', text: 'Get a balanced weekly menu', sub: 'Variety-optimized — no repeats, proper nutrition' },
+              { step: '3', text: 'Swap dishes, get approval from flatmates', sub: 'Everyone votes before the menu is locked in' },
+              { step: '4', text: 'Share one link with your cook', sub: 'Recipes in Hindi or Marathi, no app needed' },
+            ].map((s, i) => (
+              <Reveal key={s.step} delay={i * 0.08}>
+                <div className="flex gap-5 items-start">
+                  <div className="w-11 h-11 rounded-2xl bg-[#2D2A26] text-white flex items-center justify-center font-bold text-[16px] flex-shrink-0 shadow-md">
+                    {s.step}
+                  </div>
+                  <div>
+                    <p className="text-[16px] font-semibold text-[#2D2A26]">{s.text}</p>
+                    <p className="text-[14px] text-[#8C8680] mt-0.5">{s.sub}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
-      </div>
+      </Reveal>
+
+      {/* === Cuisines marquee === */}
+      <Reveal>
+        <div className="py-10 overflow-hidden" style={{ marginLeft: '-20px', marginRight: '-20px' }}>
+          <h2 className="text-[22px] font-bold text-[#2D2A26] mb-6 text-center px-5">12 regional cuisines</h2>
+          <div className="relative">
+            <div className="flex gap-3 animate-marquee whitespace-nowrap">
+              {['🥥 Tamil', '🫓 North Indian', '🌶 Marathi', '🫘 Bihari', '🦐 Goan', '🏜️ Rajasthani', '🫙 Gujarati', '🐟 Bengali', '🌴 Kerala', '🔥 Andhra', '🧈 Punjabi', '🏔️ Kashmiri',
+                '🥥 Tamil', '🫓 North Indian', '🌶 Marathi', '🫘 Bihari', '🦐 Goan', '🏜️ Rajasthani', '🫙 Gujarati', '🐟 Bengali', '🌴 Kerala', '🔥 Andhra', '🧈 Punjabi', '🏔️ Kashmiri',
+              ].map((c, i) => (
+                <span key={i} className="inline-block px-5 py-2.5 rounded-full bg-white text-[15px] font-medium text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50 flex-shrink-0">
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Reveal>
 
       {/* Bottom CTA */}
-      <div className="text-center">
-        <Link
-          href="/login"
-          className="inline-block bg-[#2D2A26] text-white px-10 py-4 rounded-2xl font-semibold text-[18px] hover:bg-[#45403A] transition-colors shadow-lg"
-        >
-          Start Planning — Free
-        </Link>
-        <p className="text-[13px] text-[#C5C0BA] mt-4">No credit card. No downloads. Works on any phone.</p>
-      </div>
+      <Reveal>
+        <div className="text-center py-16">
+          <p className="text-[15px] text-[#8C8680] mb-6">Ready to stop asking &ldquo;aaj kya banega?&rdquo; every evening?</p>
+          <Link
+            href="/login"
+            className="inline-block bg-[#2D2A26] text-white px-10 py-4 rounded-2xl font-semibold text-[18px] hover:bg-[#45403A] transition-all hover:scale-[1.03] shadow-lg active:scale-100"
+          >
+            Start Planning — Free
+          </Link>
+          <p className="text-[13px] text-[#C5C0BA] mt-4">No credit card. No downloads. Works on any phone.</p>
+        </div>
+      </Reveal>
 
       {/* Footer */}
-      <div className="mt-16 pt-6 border-t border-[#E5DFD6] flex justify-center gap-6 text-[13px] text-[#C5C0BA]">
-        <Link href="/privacy" className="hover:text-[#2D2A26]">Privacy</Link>
-        <Link href="/terms" className="hover:text-[#2D2A26]">Terms</Link>
+      <div className="pt-6 border-t border-[#E5DFD6] flex justify-center gap-6 text-[13px] text-[#C5C0BA] pb-4">
+        <Link href="/privacy" className="hover:text-[#2D2A26] transition-colors">Privacy</Link>
+        <Link href="/terms" className="hover:text-[#2D2A26] transition-colors">Terms</Link>
       </div>
     </div>
   )
