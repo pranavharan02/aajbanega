@@ -74,15 +74,15 @@ function Landing() {
   return (
     <div className="landing-page">
       {/* Hero */}
-      <div className="text-center pt-12 pb-6">
+      <div className="text-center pt-12 pb-12">
         <h1
-          className="text-[52px] font-extrabold text-[#2D2A26] leading-[1.05] tracking-tight mb-5"
+          className="text-[44px] font-extrabold text-[#2D2A26] leading-[1.1] tracking-tight mb-5"
           style={{ animation: 'heroIn 0.8s cubic-bezier(0.16,1,0.3,1) both' }}
         >
-          आज क्या बनेगा?
+          what&apos;s cooking<br />this week?
         </h1>
         <p
-          className="text-[20px] text-[#8C8680] leading-relaxed max-w-sm mx-auto mb-10"
+          className="text-[20px] text-[#8C8680] leading-relaxed max-w-sm mx-auto mb-8"
           style={{ animation: 'heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.15s both' }}
         >
           Plan meals for the week.<br />Share with your cook. In their language.
