@@ -152,7 +152,7 @@ export default function OnboardingPage() {
         .select('id')
         .single()
       if (data) setHouseholdId(data.id)
-      router.push('/')
+      window.location.href = '/'
       return
     }
 

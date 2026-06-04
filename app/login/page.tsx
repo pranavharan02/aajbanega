@@ -44,7 +44,7 @@ function LoginForm() {
       }
 
       const next = searchParams.get('next') || '/onboarding'
-      router.push(next)
+      window.location.href = next
     } catch {
       setError('Network error. Please check your connection.')
       setLoading(false)
