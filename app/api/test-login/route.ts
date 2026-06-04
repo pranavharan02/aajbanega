@@ -6,18 +6,45 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// Rate limit: 5 signups per IP per hour
+const signupLimits = new Map<string, { count: number; resetAt: number }>()
+const SIGNUP_LIMIT = 5
+const SIGNUP_WINDOW = 60 * 60 * 1000
+
 export async function POST(request: NextRequest) {
+  // Rate limit by IP
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const now = Date.now()
+  const entry = signupLimits.get(ip)
+  if (entry && now < entry.resetAt && entry.count >= SIGNUP_LIMIT) {
+    return NextResponse.json({ error: 'Too many signups. Try again later.' }, { status: 429 })
+  }
+  if (!entry || now >= entry.resetAt) {
+    signupLimits.set(ip, { count: 1, resetAt: now + SIGNUP_WINDOW })
+  } else {
+    entry.count++
+  }
+
   const { name, email } = await request.json()
 
   if (!name?.trim() || !email?.trim()) {
     return NextResponse.json({ error: 'Name and email required' }, { status: 400 })
   }
 
+  // Basic email validation
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
+  }
+
+  // Cap name length
+  const cleanName = name.trim().slice(0, 100)
+  const cleanEmail = email.trim().slice(0, 254).toLowerCase()
+
   const { data: household, error } = await supabase
     .from('households')
     .insert({
-      name: name.trim(),
-      email: email.trim(),
+      name: cleanName,
+      email: cleanEmail,
       default_servings: 2,
       default_cuisines: ['tamil', 'north'],
       default_veg_days: 4,
@@ -34,13 +61,12 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json({ household_id: household.id, invite_code: household.invite_code })
 
-  // Set cookie so middleware can identify test-mode users
   response.cookies.set('akb_household', household.id, {
     path: '/',
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 365, // 1 year
+    maxAge: 60 * 60 * 24 * 365,
   })
 
   response.cookies.set('akb_test_mode', 'true', {

@@ -36,8 +36,14 @@ yarn-error.log*
 # vercel
 .vercel
 
+# seed/dev scripts (not needed in deploy)
+run-seed.js
+seed-more.js
+seed-dishes.json
+translate-dishes.js
+gen-icons.js
+sql-*.sql
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-.vercel
