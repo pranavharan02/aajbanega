@@ -96,13 +96,6 @@ function Landing() {
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <div className="flex justify-center py-10" style={{ animation: 'fadeIn 1s 1.2s both' }}>
-        <div className="w-6 h-10 rounded-full border-2 border-[#C5C0BA] flex justify-center pt-2">
-          <div className="w-1.5 h-3 rounded-full bg-[#C5C0BA] animate-bounce" />
-        </div>
-      </div>
-
       {/* === Sticky scroll feature cards === */}
       <div className="relative" style={{ marginLeft: '-20px', marginRight: '-20px' }}>
         {FEATURES.map((f, i) => (
@@ -201,19 +194,32 @@ function Landing() {
         </div>
       </Reveal>
 
-      {/* === Cuisines marquee === */}
+      {/* === Cuisines marquee (two lines, opposite directions) === */}
       <Reveal>
         <div className="py-10 overflow-hidden" style={{ marginLeft: '-20px', marginRight: '-20px' }}>
           <h2 className="text-[22px] font-bold text-[#2D2A26] mb-6 text-center px-5">12 regional cuisines</h2>
-          <div className="relative">
-            <div className="flex gap-3 animate-marquee whitespace-nowrap">
-              {['🥥 Tamil', '🫓 North Indian', '🌶 Marathi', '🫘 Bihari', '🦐 Goan', '🏜️ Rajasthani', '🫙 Gujarati', '🐟 Bengali', '🌴 Kerala', '🔥 Andhra', '🧈 Punjabi', '🏔️ Kashmiri',
-                '🥥 Tamil', '🫓 North Indian', '🌶 Marathi', '🫘 Bihari', '🦐 Goan', '🏜️ Rajasthani', '🫙 Gujarati', '🐟 Bengali', '🌴 Kerala', '🔥 Andhra', '🧈 Punjabi', '🏔️ Kashmiri',
-              ].map((c, i) => (
-                <span key={i} className="inline-block px-5 py-2.5 rounded-full bg-white text-[15px] font-medium text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50 flex-shrink-0">
-                  {c}
-                </span>
-              ))}
+          <div className="space-y-3">
+            <div className="relative">
+              <div className="flex gap-3 animate-marquee whitespace-nowrap">
+                {['🥥 Tamil', '🫓 North Indian', '🌶 Marathi', '🫘 Bihari', '🦐 Goan', '🏜️ Rajasthani',
+                  '🥥 Tamil', '🫓 North Indian', '🌶 Marathi', '🫘 Bihari', '🦐 Goan', '🏜️ Rajasthani',
+                ].map((c, i) => (
+                  <span key={i} className="inline-block px-5 py-2.5 rounded-full bg-white text-[15px] font-medium text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50 flex-shrink-0">
+                    {c}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="relative">
+              <div className="flex gap-3 animate-marquee-reverse whitespace-nowrap">
+                {['🫙 Gujarati', '🐟 Bengali', '🌴 Kerala', '🔥 Andhra', '🧈 Punjabi', '🏔️ Kashmiri',
+                  '🫙 Gujarati', '🐟 Bengali', '🌴 Kerala', '🔥 Andhra', '🧈 Punjabi', '🏔️ Kashmiri',
+                ].map((c, i) => (
+                  <span key={i} className="inline-block px-5 py-2.5 rounded-full bg-white text-[15px] font-medium text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50 flex-shrink-0">
+                    {c}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>

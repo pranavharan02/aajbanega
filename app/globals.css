@@ -132,7 +132,16 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .animate-marquee {
-  animation: marquee 30s linear infinite;
+  animation: marquee 25s linear infinite;
+}
+
+@keyframes marqueeReverse {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+.animate-marquee-reverse {
+  animation: marqueeReverse 25s linear infinite;
 }
 
 .landing-page .card:hover {
