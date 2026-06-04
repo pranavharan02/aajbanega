@@ -114,7 +114,7 @@ function Landing() {
             {/* Outgoing: You */}
             <div className="flex justify-end" style={{ animation: 'msgIn 0.4s cubic-bezier(0.16,1,0.3,1) 0.7s both' }}>
               <div className="relative rounded-lg rounded-tr-sm px-3 py-1.5 shadow-sm" style={{ background: '#D9FDD3', maxWidth: '80%' }}>
-                <p className="text-[15px] text-[#111B21]">ruko sochti hun... 🤔</p>
+                <p className="text-[15px] text-[#111B21]">batati hun didi ...</p>
                 <div className="flex items-center justify-end gap-1 -mb-0.5">
                   <span className="text-[11px]" style={{ color: '#667781' }}>6:32 pm</span>
                   <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M11.07 0.73L4.53 7.27L1.77 4.51L0.36 5.93L4.53 10.1L12.48 2.15L11.07 0.73Z" fill="#53BDEB"/><path d="M14.07 0.73L7.53 7.27L6.83 6.57L5.42 7.98L7.53 10.1L15.48 2.15L14.07 0.73Z" fill="#53BDEB"/></svg>
@@ -122,9 +122,9 @@ function Landing() {
               </div>
             </div>
 
-            {/* Typing indicator */}
-            <div className="flex justify-start" style={{ animation: 'msgIn 0.4s cubic-bezier(0.16,1,0.3,1) 1.1s both' }}>
-              <div className="rounded-lg rounded-tl-sm px-4 py-3 shadow-sm" style={{ background: '#FFFFFF' }}>
+            {/* Typing indicator (outgoing — user still composing) */}
+            <div className="flex justify-end" style={{ animation: 'msgIn 0.4s cubic-bezier(0.16,1,0.3,1) 1.1s both' }}>
+              <div className="rounded-lg rounded-tr-sm px-4 py-3 shadow-sm" style={{ background: '#D9FDD3' }}>
                 <div className="flex gap-1 items-center">
                   <div className="w-2 h-2 rounded-full bg-[#8696A0] animate-bounce" style={{ animationDelay: '0s', animationDuration: '1.4s' }} />
                   <div className="w-2 h-2 rounded-full bg-[#8696A0] animate-bounce" style={{ animationDelay: '0.2s', animationDuration: '1.4s' }} />
