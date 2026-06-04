@@ -75,12 +75,19 @@ function Landing() {
     <div className="landing-page">
       {/* Hero */}
       <div className="text-center pt-12 pb-12">
-        <h1
-          className="text-[44px] font-extrabold text-[#2D2A26] leading-[1.1] tracking-tight mb-5"
-          style={{ animation: 'heroIn 0.8s cubic-bezier(0.16,1,0.3,1) both' }}
-        >
-          what&apos;s cooking<br />this week?
-        </h1>
+        {/* WhatsApp-style chat bubble */}
+        <div className="flex justify-center mb-6" style={{ animation: 'heroIn 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
+          <div className="relative inline-block bg-[#DCF8C6] rounded-2xl rounded-br-sm px-6 py-4 shadow-md" style={{ maxWidth: '320px' }}>
+            <h1 className="text-[32px] font-bold text-[#111B21] leading-tight text-left">
+              aaj kya banega?
+            </h1>
+            <div className="flex items-center justify-end gap-1 mt-1">
+              <span className="text-[11px] text-[#667781]">6:30 pm</span>
+              <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M11.07 0.73L4.53 7.27L1.77 4.51L0.36 5.93L4.53 10.1L12.48 2.15L11.07 0.73Z" fill="#53BDEB"/><path d="M14.07 0.73L7.53 7.27L6.83 6.57L5.42 7.98L7.53 10.1L15.48 2.15L14.07 0.73Z" fill="#53BDEB"/></svg>
+            </div>
+            <div className="absolute -bottom-1 right-0 w-3 h-3 bg-[#DCF8C6]" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%)' }} />
+          </div>
+        </div>
         <p
           className="text-[20px] text-[#8C8680] leading-relaxed max-w-sm mx-auto mb-8"
           style={{ animation: 'heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.15s both' }}
