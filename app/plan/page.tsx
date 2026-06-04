@@ -6,12 +6,16 @@ import { getMonday, formatDate, getWeekLabel } from '@/lib/dates'
 import { ensureHousehold } from '@/lib/household'
 import { CUISINE_LABELS, MEAL_LABELS, MEAL_EMOJI, MEAL_ORDER, type CuisineType, type MealType } from '@/lib/types'
 
-const CUISINES: CuisineType[] = ['tamil', 'north', 'marathi', 'bihari']
+const CUISINES: CuisineType[] = ['tamil', 'north', 'marathi', 'bihari', 'gujarati', 'bengali', 'kerala', 'andhra', 'goan', 'rajasthani', 'punjabi', 'kashmiri']
 const CUISINE_EMOJI: Record<string, string> = {
   tamil: '🥥', north: '🫓', marathi: '🌶', bihari: '🫘',
+  gujarati: '🫙', bengali: '🐟', kerala: '🌴', andhra: '🔥',
+  goan: '🦐', rajasthani: '🏜️', punjabi: '🧈', kashmiri: '🏔️',
 }
 const CUISINE_BG: Record<string, string> = {
   tamil: '#E8D5C4', north: '#F5E6CC', marathi: '#D4E8D4', bihari: '#E8DCC8',
+  gujarati: '#E8E4D0', bengali: '#D4DEE8', kerala: '#D0E8D4', andhra: '#E8D4D4',
+  goan: '#E8DED4', rajasthani: '#E8E0D0', punjabi: '#E8E4D4', kashmiri: '#D8E0E8',
 }
 
 export default function PlanPage() {

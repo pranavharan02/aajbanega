@@ -29,7 +29,14 @@ export default function LoginPage() {
       return
     }
 
-    // Cookie is set by the API — redirect to onboarding
+    // Set cookies in document.cookie immediately so they're available
+    // before the next page's useEffect runs (API Set-Cookie headers may
+    // not be reflected in document.cookie fast enough for client-side reads)
+    if (data.household_id) {
+      document.cookie = `akb_household=${encodeURIComponent(data.household_id)}; path=/; max-age=${60*60*24*365}; samesite=lax`
+      document.cookie = `akb_test_mode=true; path=/; max-age=${60*60*24*365}; samesite=lax`
+    }
+
     router.push('/onboarding')
   }
 

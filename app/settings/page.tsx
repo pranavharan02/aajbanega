@@ -6,7 +6,7 @@ import { ensureHousehold, getHouseholdId } from '@/lib/household'
 import { CUISINE_LABELS, MEAL_LABELS, MEAL_EMOJI, MEAL_ORDER, type CuisineType, type MealType } from '@/lib/types'
 import Link from 'next/link'
 
-const CUISINES: CuisineType[] = ['tamil', 'north', 'marathi', 'bihari']
+const CUISINES: CuisineType[] = ['tamil', 'north', 'marathi', 'bihari', 'gujarati', 'bengali', 'kerala', 'andhra', 'goan', 'rajasthani', 'punjabi', 'kashmiri']
 
 export default function SettingsPage() {
   const [servings, setServings] = useState(2)
