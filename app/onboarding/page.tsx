@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { createSupabaseBrowser } from '@/lib/supabase-browser'
@@ -18,33 +18,90 @@ type Step = 'name' | 'household' | 'preferences'
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const { user, isTestMode } = useAuth()
+  const { user } = useAuth()
   const supabase = createSupabaseBrowser()
 
-  // In test mode, household was already created at login — skip to step 2
-  const existingHouseholdId = getHouseholdId()
-  const startStep: Step = (isTestMode && existingHouseholdId) ? 'household' : 'name'
-
-  const [step, setStep] = useState<Step>(startStep)
-  const [name, setName] = useState(user?.user_metadata?.full_name || '')
+  const [step, setStep] = useState<Step>('name')
+  const [name, setName] = useState('')
   const [flatmates, setFlatmates] = useState<{ contact: string }[]>([])
   const [selectedCuisines, setSelectedCuisines] = useState<CuisineType[]>(['tamil', 'north'])
   const [selectedMeals, setSelectedMeals] = useState<MealType[]>(['dinner'])
   const [vegDays, setVegDays] = useState(4)
   const [saving, setSaving] = useState(false)
   const [invitesSent, setInvitesSent] = useState(false)
-  const [householdId, setHhId] = useState<string | null>(existingHouseholdId)
+  const [householdId, setHhId] = useState<string | null>(null)
   const [inviteCode, setInviteCode] = useState<string | null>(null)
-  const [codeLoaded, setCodeLoaded] = useState(false)
+  const [ready, setReady] = useState(false)
 
-  // Fetch invite code + name for existing household
-  if (existingHouseholdId && !codeLoaded) {
-    setCodeLoaded(true)
-    supabase.from('households').select('invite_code, name').eq('id', existingHouseholdId).single()
-      .then(({ data }) => {
-        if (data?.invite_code) setInviteCode(data.invite_code)
-        if (data?.name && !name) setName(data.name)
-      })
+  // On mount: check if household already exists (from test-login or auth)
+  useEffect(() => {
+    async function init() {
+      const cookieHhId = getHouseholdId()
+
+      if (cookieHhId) {
+        // Household exists (test-login created it) — load its data and skip to step 2
+        const { data } = await supabase.from('households').select('id, name, invite_code').eq('id', cookieHhId).single()
+        if (data) {
+          setHhId(data.id)
+          setName(data.name || '')
+          setInviteCode(data.invite_code || null)
+          setStep('household')
+          setReady(true)
+          return
+        }
+      }
+
+      if (user) {
+        // Check if auth user has a household
+        const { data } = await supabase.from('households').select('id, name, invite_code').eq('user_id', user.id).single()
+        if (data) {
+          setHhId(data.id)
+          setName(data.name || user.user_metadata?.full_name || '')
+          setInviteCode(data.invite_code || null)
+          setHouseholdId(data.id)
+          setStep('household')
+          setReady(true)
+          return
+        }
+        setName(user.user_metadata?.full_name || '')
+      }
+
+      setReady(true)
+    }
+    init()
+  }, [user, supabase])
+
+  async function handleNameNext() {
+    if (!name.trim()) return
+    setSaving(true)
+
+    if (householdId) {
+      // Update existing household name
+      await supabase.from('households').update({ name: name.trim() }).eq('id', householdId)
+    } else {
+      // Create new household
+      const { data } = await supabase
+        .from('households')
+        .insert({
+          user_id: user?.id || null,
+          name: name.trim(),
+          default_servings: 2,
+          default_cuisines: ['tamil', 'north'],
+          default_veg_days: 4,
+          preferred_cook_lang: 'hi',
+          default_meals: ['dinner'],
+        })
+        .select('id, invite_code')
+        .single()
+
+      if (data) {
+        setHhId(data.id)
+        setInviteCode(data.invite_code)
+        setHouseholdId(data.id)
+      }
+    }
+    setSaving(false)
+    setStep('household')
   }
 
   function addFlatmate() {
@@ -57,33 +114,6 @@ export default function OnboardingPage() {
 
   function removeFlatmate(index: number) {
     setFlatmates(prev => prev.filter((_, i) => i !== index))
-  }
-
-  async function handleNameNext() {
-    if (!name.trim()) return
-    setSaving(true)
-
-    const { data: household } = await supabase
-      .from('households')
-      .insert({
-        user_id: user?.id || null,
-        name: name.trim(),
-        default_servings: 2,
-        default_cuisines: ['tamil', 'north'],
-        default_veg_days: 4,
-        preferred_cook_lang: 'hi',
-        default_meals: ['dinner'],
-      })
-      .select('id, invite_code')
-      .single()
-
-    if (household) {
-      setHhId(household.id)
-      setInviteCode(household.invite_code)
-      setHouseholdId(household.id)
-    }
-    setSaving(false)
-    setStep('household')
   }
 
   function getInviteUrl() {
@@ -105,7 +135,27 @@ export default function OnboardingPage() {
   }
 
   async function handleFinish() {
-    if (!householdId) return
+    if (!householdId) {
+      // Safety: shouldn't happen, but create household if missing
+      const { data } = await supabase
+        .from('households')
+        .insert({
+          user_id: user?.id || null,
+          name: name.trim() || 'My Household',
+          default_servings: 2,
+          default_cuisines: selectedCuisines,
+          default_veg_days: vegDays,
+          preferred_cook_lang: 'hi',
+          default_meals: selectedMeals,
+          onboarding_done: true,
+        })
+        .select('id')
+        .single()
+      if (data) setHouseholdId(data.id)
+      router.push('/')
+      return
+    }
+
     setSaving(true)
     await supabase.from('households').update({
       default_cuisines: selectedCuisines,
@@ -115,6 +165,14 @@ export default function OnboardingPage() {
     }).eq('id', householdId)
     setSaving(false)
     router.push('/')
+  }
+
+  if (!ready) {
+    return (
+      <div className="py-20 flex justify-center">
+        <div className="w-8 h-8 border-3 border-[#2D2A26] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -137,7 +195,6 @@ export default function OnboardingPage() {
         <div>
           <h1 className="text-[28px] font-bold text-[#2D2A26] mb-2">What's your name?</h1>
           <p className="text-[#8C8680] text-[16px] mb-8">So your household knows who's planning the meals.</p>
-
           <input
             type="text"
             value={name}
@@ -146,7 +203,6 @@ export default function OnboardingPage() {
             autoFocus
             className="w-full px-5 py-4 rounded-2xl border-2 border-[#E5DFD6] text-[18px] bg-[#FFFDF9] focus:outline-none focus:border-[#2D2A26] transition-colors mb-6"
           />
-
           <button
             onClick={handleNameNext}
             disabled={!name.trim() || saving}
@@ -185,18 +241,16 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          <div className="space-y-3 mb-8">
-            <button
-              onClick={addFlatmate}
-              className="w-full card p-4 text-left flex items-center gap-4 hover:shadow-md transition-shadow"
-            >
-              <div className="w-11 h-11 rounded-xl bg-[#F5F0EA] flex items-center justify-center text-[20px]">+</div>
-              <div>
-                <p className="font-semibold text-[16px] text-[#2D2A26]">Add a flatmate</p>
-                <p className="text-[13px] text-[#8C8680]">They'll get a WhatsApp invite to join</p>
-              </div>
-            </button>
-          </div>
+          <button
+            onClick={addFlatmate}
+            className="w-full card p-4 text-left flex items-center gap-4 hover:shadow-md transition-shadow mb-8"
+          >
+            <div className="w-11 h-11 rounded-xl bg-[#F5F0EA] flex items-center justify-center text-[20px]">+</div>
+            <div>
+              <p className="font-semibold text-[16px] text-[#2D2A26]">Add a flatmate</p>
+              <p className="text-[13px] text-[#8C8680]">They'll get a WhatsApp invite to join</p>
+            </div>
+          </button>
 
           {flatmates.length > 0 && flatmates.some(f => f.contact.trim()) && !invitesSent && (
             <button
@@ -215,14 +269,12 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          <div className="flex gap-3">
-            <button
-              onClick={() => setStep('preferences')}
-              className="flex-1 bg-[#2D2A26] text-white py-4 rounded-2xl font-semibold text-[17px] hover:bg-[#45403A] transition-colors"
-            >
-              {flatmates.length > 0 ? 'Continue' : 'It\'s only me'}
-            </button>
-          </div>
+          <button
+            onClick={() => setStep('preferences')}
+            className="w-full bg-[#2D2A26] text-white py-4 rounded-2xl font-semibold text-[17px] hover:bg-[#45403A] transition-colors"
+          >
+            {flatmates.length > 0 ? 'Continue' : "It's only me"}
+          </button>
 
           {flatmates.length === 0 && (
             <p className="text-center text-[13px] text-[#C5C0BA] mt-4">You can always invite people later from Settings.</p>
@@ -236,7 +288,6 @@ export default function OnboardingPage() {
           <h1 className="text-[28px] font-bold text-[#2D2A26] mb-2">Set your preferences</h1>
           <p className="text-[#8C8680] text-[16px] mb-8">Pick your cuisines and meal routine. You can change these anytime.</p>
 
-          {/* Meals */}
           <div className="mb-8">
             <h2 className="text-[15px] font-semibold text-[#2D2A26] mb-3">Meals to plan</h2>
             <div className="flex gap-2">
@@ -255,7 +306,6 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Veg/NV */}
           <div className="mb-8">
             <h2 className="text-[15px] font-semibold text-[#2D2A26] mb-3">Veg / Non-Veg split</h2>
             <div className="card p-5">
@@ -267,7 +317,6 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Cuisines */}
           <div className="mb-10">
             <h2 className="text-[15px] font-semibold text-[#2D2A26] mb-3">Favourite cuisines</h2>
             <div className="grid grid-cols-3 gap-2">
