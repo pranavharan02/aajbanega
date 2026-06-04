@@ -2,12 +2,28 @@ import { createSupabaseBrowser } from './supabase-browser'
 
 const INVENTORY_SEEDED_KEY = 'akb_inventory_seeded'
 
-export const COMMON_STAPLES = [
-  'Oil', 'Ghee', 'Salt', 'Turmeric', 'Red chilli powder', 'Coriander powder',
-  'Cumin seeds', 'Mustard seeds', 'Garam masala', 'Sugar', 'Water',
-  'Curry leaves', 'Asafoetida', 'Black pepper', 'Coriander leaves',
-  'Green chilli', 'Ginger', 'Garlic', 'Onion', 'Tomato',
-]
+export const COMMON_STAPLES: Record<string, { qty: number; unit: string }> = {
+  'Oil':               { qty: 1, unit: 'L' },
+  'Ghee':              { qty: 0.5, unit: 'kg' },
+  'Salt':              { qty: 1, unit: 'kg' },
+  'Turmeric':          { qty: 100, unit: 'g' },
+  'Red chilli powder': { qty: 100, unit: 'g' },
+  'Coriander powder':  { qty: 100, unit: 'g' },
+  'Cumin seeds':       { qty: 100, unit: 'g' },
+  'Mustard seeds':     { qty: 100, unit: 'g' },
+  'Garam masala':      { qty: 100, unit: 'g' },
+  'Sugar':             { qty: 1, unit: 'kg' },
+  'Water':             { qty: 1, unit: 'L' },
+  'Curry leaves':      { qty: 1, unit: 'packets' },
+  'Asafoetida':        { qty: 50, unit: 'g' },
+  'Black pepper':      { qty: 50, unit: 'g' },
+  'Coriander leaves':  { qty: 1, unit: 'packets' },
+  'Green chilli':      { qty: 100, unit: 'g' },
+  'Ginger':            { qty: 100, unit: 'g' },
+  'Garlic':            { qty: 100, unit: 'g' },
+  'Onion':             { qty: 1, unit: 'kg' },
+  'Tomato':            { qty: 0.5, unit: 'kg' },
+}
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null
@@ -130,16 +146,19 @@ async function seedCommonInventory(householdId: string): Promise<void> {
   const { data: ingredients } = await supabase
     .from('ingredients')
     .select('id, name_en')
-    .in('name_en', COMMON_STAPLES)
+    .in('name_en', Object.keys(COMMON_STAPLES))
 
   if (!ingredients?.length) return
 
-  const items = ingredients.map(ing => ({
-    household_id: householdId,
-    ingredient_id: ing.id,
-    quantity: 1,
-    unit: 'packets',
-  }))
+  const items = ingredients.map(ing => {
+    const defaults = COMMON_STAPLES[ing.name_en] || { qty: 1, unit: 'packets' }
+    return {
+      household_id: householdId,
+      ingredient_id: ing.id,
+      quantity: defaults.qty,
+      unit: defaults.unit,
+    }
+  })
 
   await supabase.from('inventory').insert(items)
   localStorage.setItem(INVENTORY_SEEDED_KEY, 'true')
