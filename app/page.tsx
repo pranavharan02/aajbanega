@@ -370,7 +370,7 @@ function Dashboard() {
           <div className="text-7xl mb-6">🍛</div>
           <h2 className="text-3xl font-bold text-[#2D2A26] mb-3">No menu yet</h2>
           <p className="text-[#8C8680] mb-10 max-w-sm mx-auto text-lg leading-relaxed">
-            Plan this week's meals — pick cuisines, set veg/non-veg split, and let AI build your menu.
+            Plan this week's meals — pick cuisines, set veg/non-veg split, and get a balanced menu.
           </p>
           <Link
             href={`/plan?week=${weekStart}`}
