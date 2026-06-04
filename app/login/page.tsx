@@ -12,12 +12,10 @@ function LoginForm() {
   const [email, setEmail] = useState('')
 
   useEffect(() => {
-    const testMode = document.cookie.includes('akb_test_mode=true')
-    const household = document.cookie.includes('akb_household=')
-    if (testMode && household) {
-      router.replace(searchParams.get('next') || '/')
-    }
-  }, [router, searchParams])
+    // Clear any stale test-mode cookies so the user starts fresh
+    document.cookie = 'akb_test_mode=; path=/; max-age=0'
+    document.cookie = 'akb_household=; path=/; max-age=0'
+  }, [])
 
   async function handleTestLogin(e: React.FormEvent) {
     e.preventDefault()
