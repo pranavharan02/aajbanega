@@ -7,6 +7,7 @@ import { AuthProvider } from "@/components/AuthProvider"
 import { ServiceWorkerRegistration } from "@/components/ServiceWorker"
 import { Suspense } from "react"
 import { PostHogProvider } from "@/components/PostHog"
+import { Analytics } from "@vercel/analytics/next"
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -67,6 +68,7 @@ export default function RootLayout({
           <ServiceWorkerRegistration />
           <Suspense fallback={null}><PostHogProvider /></Suspense>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   )
