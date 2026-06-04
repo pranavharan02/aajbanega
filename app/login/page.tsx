@@ -2,8 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createSupabaseBrowser } from '@/lib/supabase-browser'
-import { setHouseholdId } from '@/lib/household'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -18,50 +16,25 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const supabase = createSupabaseBrowser()
+    const res = await fetch('/api/test-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.trim(), email: email.trim() }),
+    })
 
-    // Create a household directly (no auth — test mode)
-    const { data: household, error: hErr } = await supabase
-      .from('households')
-      .insert({
-        name: name.trim(),
-        default_servings: 2,
-        default_cuisines: ['tamil', 'north'],
-        default_veg_days: 4,
-        preferred_cook_lang: 'hi',
-        default_meals: ['dinner'],
-        onboarding_done: false,
-      })
-      .select('id')
-      .single()
-
-    if (hErr || !household) {
-      setError(hErr?.message || 'Failed to create household')
+    const data = await res.json()
+    if (data.error) {
+      setError(data.error)
       setLoading(false)
       return
     }
 
-    setHouseholdId(household.id)
-    localStorage.setItem('akb_user_name', name.trim())
-    localStorage.setItem('akb_user_email', email.trim())
-    localStorage.setItem('akb_test_mode', 'true')
+    // Cookie is set by the API — redirect to onboarding
     router.push('/onboarding')
   }
 
-  async function handleGoogleLogin() {
-    setLoading(true)
-    setError('')
-    const supabase = createSupabaseBrowser()
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    }
+  function handleGoogleLogin() {
+    setError('Google login is not configured yet. Use the name + email form above for now.')
   }
 
   return (
@@ -74,7 +47,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Test login — remove when Google OAuth is configured */}
         <form onSubmit={handleTestLogin} className="card p-6 space-y-4 mb-4">
           <input
             type="text"
@@ -99,7 +71,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Google OAuth — will work once configured in Supabase dashboard */}
         <button
           onClick={handleGoogleLogin}
           disabled={loading}
@@ -115,7 +86,11 @@ export default function LoginPage() {
         </button>
 
         {error && (
-          <p className="text-[14px] text-center text-[#C62828] mt-4">{error}</p>
+          <div className={`mt-4 p-3 rounded-xl text-[14px] text-center ${
+            error.includes('not configured') ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-[#C62828]'
+          }`}>
+            {error}
+          </div>
         )}
 
         <p className="text-center text-[13px] text-[#C5C0BA] mt-6">

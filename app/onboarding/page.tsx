@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { createSupabaseBrowser } from '@/lib/supabase-browser'
-import { setHouseholdId } from '@/lib/household'
+import { getHouseholdId, setHouseholdId } from '@/lib/household'
 import { CUISINE_LABELS, MEAL_LABELS, MEAL_EMOJI, MEAL_ORDER, type CuisineType, type MealType } from '@/lib/types'
 
 const CUISINES: CuisineType[] = ['tamil', 'north', 'marathi', 'bihari', 'gujarati', 'bengali', 'kerala', 'andhra', 'goan', 'rajasthani', 'punjabi', 'kashmiri']
@@ -22,12 +22,11 @@ export default function OnboardingPage() {
   const supabase = createSupabaseBrowser()
 
   // In test mode, household was already created at login — skip to step 2
-  const existingHouseholdId = typeof window !== 'undefined' ? localStorage.getItem('akb_household_id') : null
-  const testName = typeof window !== 'undefined' ? localStorage.getItem('akb_user_name') : null
+  const existingHouseholdId = getHouseholdId()
   const startStep: Step = (isTestMode && existingHouseholdId) ? 'household' : 'name'
 
   const [step, setStep] = useState<Step>(startStep)
-  const [name, setName] = useState(user?.user_metadata?.full_name || testName || '')
+  const [name, setName] = useState(user?.user_metadata?.full_name || '')
   const [flatmates, setFlatmates] = useState<{ contact: string }[]>([])
   const [selectedCuisines, setSelectedCuisines] = useState<CuisineType[]>(['tamil', 'north'])
   const [selectedMeals, setSelectedMeals] = useState<MealType[]>(['dinner'])
@@ -36,11 +35,16 @@ export default function OnboardingPage() {
   const [invitesSent, setInvitesSent] = useState(false)
   const [householdId, setHhId] = useState<string | null>(existingHouseholdId)
   const [inviteCode, setInviteCode] = useState<string | null>(null)
+  const [codeLoaded, setCodeLoaded] = useState(false)
 
-  // Fetch invite code for existing household (test mode)
-  if (isTestMode && existingHouseholdId && !inviteCode) {
-    supabase.from('households').select('invite_code').eq('id', existingHouseholdId).single()
-      .then(({ data }) => { if (data?.invite_code) setInviteCode(data.invite_code) })
+  // Fetch invite code + name for existing household
+  if (existingHouseholdId && !codeLoaded) {
+    setCodeLoaded(true)
+    supabase.from('households').select('invite_code, name').eq('id', existingHouseholdId).single()
+      .then(({ data }) => {
+        if (data?.invite_code) setInviteCode(data.invite_code)
+        if (data?.name && !name) setName(data.name)
+      })
   }
 
   function addFlatmate() {

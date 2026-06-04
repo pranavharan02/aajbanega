@@ -1,6 +1,5 @@
 import { createSupabaseBrowser } from './supabase-browser'
 
-const HOUSEHOLD_KEY = 'akb_household_id'
 const INVENTORY_SEEDED_KEY = 'akb_inventory_seeded'
 
 export const COMMON_STAPLES = [
@@ -10,21 +9,31 @@ export const COMMON_STAPLES = [
   'Green chilli', 'Ginger', 'Garlic', 'Onion', 'Tomato',
 ]
 
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
+  return match ? decodeURIComponent(match[2]) : null
+}
+
+function setCookie(name: string, value: string) {
+  if (typeof document === 'undefined') return
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
+}
+
 export function getHouseholdId(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem(HOUSEHOLD_KEY)
+  return getCookie('akb_household')
 }
 
 export function setHouseholdId(id: string): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(HOUSEHOLD_KEY, id)
+  setCookie('akb_household', id)
 }
 
 export async function ensureHousehold(): Promise<string> {
   const supabase = createSupabaseBrowser()
   const { data: { user } } = await supabase.auth.getUser()
 
-  let id = getHouseholdId()
+  // Check cookie first
+  const cookieId = getHouseholdId()
 
   if (user) {
     // Authenticated: find household linked to this user
@@ -41,7 +50,6 @@ export async function ensureHousehold(): Promise<string> {
       return owned.id
     }
 
-    // Check membership
     const { data: member } = await supabase
       .from('household_members')
       .select('household_id')
@@ -77,22 +85,16 @@ export async function ensureHousehold(): Promise<string> {
     throw new Error('Failed to create household')
   }
 
-  // Unauthenticated fallback (for backward compatibility)
-  if (id) {
-    const { data } = await supabase.from('households').select('id').eq('id', id).single()
+  // Test mode / unauthenticated: use cookie
+  if (cookieId) {
+    const { data } = await supabase.from('households').select('id').eq('id', cookieId).single()
     if (data) {
-      await seedCommonInventory(id)
-      return id
+      await seedCommonInventory(cookieId)
+      return cookieId
     }
   }
 
-  const { data: existing } = await supabase.from('households').select('id').is('user_id', null).limit(1).single()
-  if (existing) {
-    setHouseholdId(existing.id)
-    await seedCommonInventory(existing.id)
-    return existing.id
-  }
-
+  // Last resort: create anonymous household
   const { data: created } = await supabase
     .from('households')
     .insert({ default_servings: 2, default_cuisines: ['tamil', 'north'], default_veg_days: 4, preferred_cook_lang: 'hi', default_meals: ['dinner'] })

@@ -25,25 +25,29 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Check for test-mode cookie (set by /api/test-login)
+  const isTestMode = request.cookies.get('akb_test_mode')?.value === 'true'
+  const hasHousehold = !!request.cookies.get('akb_household')?.value
+
   const publicPaths = ['/login', '/cook/', '/auth/callback', '/api/', '/join/', '/onboarding']
   const isPublic = publicPaths.some(p => request.nextUrl.pathname.startsWith(p))
 
-  if (!user && !isPublic && request.nextUrl.pathname !== '/') {
+  // Allow through if: authenticated, test-mode, public path, or landing page
+  if (!user && !isTestMode && !isPublic && request.nextUrl.pathname !== '/') {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
   // Redirect authenticated users without a household to onboarding
-  if (user && !isPublic && request.nextUrl.pathname !== '/') {
+  if (user && !isPublic && request.nextUrl.pathname !== '/' && request.nextUrl.pathname !== '/onboarding') {
     const { data: household } = await supabase
       .from('households')
-      .select('id, onboarding_done')
+      .select('id')
       .eq('user_id', user.id)
       .single()
 
-    if (!household && request.nextUrl.pathname !== '/onboarding') {
-      // Check membership too
+    if (!household) {
       const { data: membership } = await supabase
         .from('household_members')
         .select('household_id')
@@ -63,5 +67,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|dish-images|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|dish-images|icons|sw.js|manifest.json|offline.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
