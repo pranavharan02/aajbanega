@@ -48,28 +48,16 @@ const DIETS = [
   { name: 'Bulking', desc: 'Calorie surplus' },
 ]
 
-const MENU_ITEMS = [
-  { emoji: '🍛', dish: 'Paneer Butter Masala' },
-  { emoji: '🍗', dish: 'Chicken Biryani' },
-  { emoji: '🫓', dish: 'Chole Bhature' },
-  { emoji: '🍲', dish: 'Sambar Rice' },
-  { emoji: '🧈', dish: 'Dal Makhani' },
-  { emoji: '🥘', dish: 'Mutton Rogan Josh' },
-  { emoji: '🍛', dish: 'Rajma Chawal' },
-  { emoji: '🥙', dish: 'Pav Bhaji' },
-  { emoji: '🍗', dish: 'Butter Chicken' },
-  { emoji: '🫓', dish: 'Masala Dosa' },
-  { emoji: '🧈', dish: 'Palak Paneer' },
-  { emoji: '🥘', dish: 'Egg Curry' },
-  { emoji: '🍲', dish: 'Kadhi Pakora' },
-  { emoji: '🐟', dish: 'Fish Curry' },
-  { emoji: '🫓', dish: 'Aloo Paratha' },
-  { emoji: '🧈', dish: 'Malai Kofta' },
-  { emoji: '🍗', dish: 'Tandoori Chicken' },
-  { emoji: '🍛', dish: 'Dal Baati Churma' },
-  { emoji: '🦐', dish: 'Goan Prawn Curry' },
-  { emoji: '🍲', dish: 'Misal Pav' },
-  { emoji: '🍛', dish: 'Litti Chokha' },
+const SLOT_REELS = [
+  ['🍛', '🍗', '🫓', '🍲', '🧈', '🥘', '🥙', '🐟', '🦐', '🌶️'],
+  ['🍗', '🧈', '🍛', '🥘', '🫓', '🍲', '🐟', '🌶️', '🦐', '🥙'],
+  ['🫓', '🍲', '🧈', '🍛', '🥘', '🍗', '🦐', '🥙', '🌶️', '🐟'],
+]
+
+const SLOT_DISHES = [
+  'Paneer Butter Masala', 'Chicken Biryani', 'Chole Bhature',
+  'Sambar Rice', 'Dal Makhani', 'Mutton Rogan Josh',
+  'Pav Bhaji', 'Fish Curry', 'Goan Prawn Curry', 'Masala Dosa',
 ]
 
 export default async function LandingPage() {
@@ -130,20 +118,59 @@ export default async function LandingPage() {
         </p>
 
         {/* Slot Machine */}
-        <div className="relative mx-auto max-w-md mb-10">
-          <div className="h-[80px] overflow-hidden relative rounded-2xl bg-[#FFFDF9] border border-[#E5DFD6] shadow-lg">
-            {/* Top gradient mask */}
-            <div className="absolute top-0 left-0 right-0 h-5 bg-gradient-to-b from-[#FFFDF9] to-transparent z-10 pointer-events-none" />
-            {/* Bottom gradient mask */}
-            <div className="absolute bottom-0 left-0 right-0 h-5 bg-gradient-to-t from-[#FFFDF9] to-transparent z-10 pointer-events-none" />
-            {/* Scrolling strip — duplicated for seamless loop */}
-            <div className="animate-slot-scroll">
-              {[...MENU_ITEMS, ...MENU_ITEMS].map((item, i) => (
-                <div key={`${item.dish}-${i}`} className="h-[80px] flex items-center justify-center gap-3 px-4 sm:px-6">
-                  <span className="text-[28px] sm:text-[32px]">{item.emoji}</span>
-                  <span className="text-[16px] sm:text-[19px] font-bold text-[#2D2A26]">{item.dish}</span>
+        <div className="relative mx-auto mb-10" style={{ maxWidth: '380px' }}>
+          <div className="rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#2D2A26' }}>
+            {/* Machine Title */}
+            <div className="text-center py-3">
+              <div className="text-[14px] sm:text-[16px] font-extrabold tracking-[0.15em] uppercase" style={{ color: '#D4A853' }}>
+                ★ Indian Kitchen ★
+              </div>
+            </div>
+
+            {/* Machine Body — 3 reels + lever */}
+            <div className="flex items-center px-4 sm:px-5 pb-4">
+              {/* Reels */}
+              <div className="flex gap-2 flex-1 justify-center">
+                {SLOT_REELS.map((reel, reelIdx) => (
+                  <div
+                    key={reelIdx}
+                    className="w-[72px] h-[72px] overflow-hidden rounded-xl bg-[#FFFDF9] border-2 border-[#E5DFD6] relative"
+                    style={{ boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.12)' }}
+                  >
+                    <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-b from-[#FFFDF9] to-transparent z-10 pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 right-0 h-3 bg-gradient-to-t from-[#FFFDF9] to-transparent z-10 pointer-events-none" />
+                    <div className="animate-reel" style={{ animationDelay: `${reelIdx * 0.3}s` }}>
+                      {reel.map((emoji, i) => (
+                        <div key={i} className="h-[72px] flex items-center justify-center text-[36px]">
+                          {emoji}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Lever */}
+              <div className="flex flex-col items-center ml-3">
+                <div className="w-[10px] rounded-full" style={{ height: '48px', background: 'linear-gradient(to bottom, #C0B8A8, #8C8680)' }} />
+                <div
+                  className="w-7 h-7 rounded-full shadow-md"
+                  style={{ background: 'radial-gradient(circle at 35% 35%, #E8E0D4, #8C8680)', border: '2px solid #A89E92', marginTop: '-2px' }}
+                />
+              </div>
+            </div>
+
+            {/* Dish Name Display */}
+            <div className="py-2.5 px-4" style={{ borderTop: '1px solid #45403A' }}>
+              <div className="h-[28px] overflow-hidden mx-auto">
+                <div className="animate-dish-name text-center">
+                  {SLOT_DISHES.map((dish, i) => (
+                    <div key={i} className="h-[28px] flex items-center justify-center text-[14px] sm:text-[15px] font-bold" style={{ color: '#D4A853' }}>
+                      {dish}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         </div>

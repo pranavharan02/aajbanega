@@ -194,11 +194,38 @@ input[type="range"]::-webkit-slider-thumb {
   animation: float 3s ease-in-out infinite;
 }
 
-@keyframes slotScroll {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-50%); }
+/* Slot machine reels — 10 items, 72px each */
+@keyframes reelSpin {
+  0%, 8% { transform: translateY(0); }
+  10%, 18% { transform: translateY(-72px); }
+  20%, 28% { transform: translateY(-144px); }
+  30%, 38% { transform: translateY(-216px); }
+  40%, 48% { transform: translateY(-288px); }
+  50%, 58% { transform: translateY(-360px); }
+  60%, 68% { transform: translateY(-432px); }
+  70%, 78% { transform: translateY(-504px); }
+  80%, 88% { transform: translateY(-576px); }
+  90%, 98% { transform: translateY(-648px); }
 }
 
-.animate-slot-scroll {
-  animation: slotScroll 42s linear infinite;
+/* Dish name strip — 10 items, 28px each */
+@keyframes dishSpin {
+  0%, 8% { transform: translateY(0); }
+  10%, 18% { transform: translateY(-28px); }
+  20%, 28% { transform: translateY(-56px); }
+  30%, 38% { transform: translateY(-84px); }
+  40%, 48% { transform: translateY(-112px); }
+  50%, 58% { transform: translateY(-140px); }
+  60%, 68% { transform: translateY(-168px); }
+  70%, 78% { transform: translateY(-196px); }
+  80%, 88% { transform: translateY(-224px); }
+  90%, 98% { transform: translateY(-252px); }
+}
+
+.animate-reel {
+  animation: reelSpin 20s ease-in-out infinite;
+}
+
+.animate-dish-name {
+  animation: dishSpin 20s ease-in-out infinite;
 }
