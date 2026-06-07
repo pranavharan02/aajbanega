@@ -28,11 +28,13 @@ export default function OnboardingPage() {
   const [householdId, setHhId] = useState<string | null>(null)
   const [inviteCode, setInviteCode] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const [existingMembers, setExistingMembers] = useState<{ id: string; email?: string }[]>([])
 
   // Browse state
   const [dishes, setDishes] = useState<Dish[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [liked, setLiked] = useState<string[]>([])
+  const [likedDishes, setLikedDishes] = useState<Dish[]>([])
   const [dishLoading, setDishLoading] = useState(false)
   const [swipeDir, setSwipeDir] = useState<'left' | 'right' | null>(null)
   const [dragX, setDragX] = useState(0)
@@ -43,12 +45,23 @@ export default function OnboardingPage() {
   useEffect(() => {
     async function init() {
       const cookieHhId = getHouseholdId()
+      async function loadMembers(hhId: string) {
+        const { data: members } = await supabase
+          .from('household_members')
+          .select('id, user_id')
+          .eq('household_id', hhId)
+        if (members && members.length > 0) {
+          setExistingMembers(members.map(m => ({ id: m.id, email: m.user_id })))
+        }
+      }
+
       if (cookieHhId) {
         const { data } = await supabase.from('households').select('id, name, invite_code').eq('id', cookieHhId).single()
         if (data) {
           setHhId(data.id)
           setName(data.name || '')
           setInviteCode(data.invite_code || null)
+          await loadMembers(data.id)
           setStep('household')
           setReady(true)
           return
@@ -61,6 +74,7 @@ export default function OnboardingPage() {
           setName(data.name || user.user_metadata?.full_name || '')
           setInviteCode(data.invite_code || null)
           setHouseholdId(data.id)
+          await loadMembers(data.id)
           setStep('household')
           setReady(true)
           return
@@ -152,7 +166,10 @@ export default function OnboardingPage() {
   function handleSwipe(direction: 'left' | 'right') {
     if (!currentDish) return
     setSwipeDir(direction)
-    if (direction === 'right') setLiked(prev => [...prev, currentDish.id])
+    if (direction === 'right') {
+      setLiked(prev => [...prev, currentDish.id])
+      setLikedDishes(prev => [...prev, currentDish])
+    }
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1)
       setSwipeDir(null)
@@ -268,6 +285,23 @@ export default function OnboardingPage() {
           <h1 className="text-[28px] font-bold text-[#2D2A26] mb-2">Who else lives with you?</h1>
           <p className="text-[#8C8680] text-[16px] mb-8">Invite flatmates so they can see and edit the menu too.</p>
 
+          {existingMembers.length > 0 && (
+            <div className="mb-6">
+              <p className="text-[13px] font-semibold text-[#8C8680] uppercase tracking-wide mb-3">Already joined</p>
+              <div className="space-y-2">
+                {existingMembers.map(m => (
+                  <div key={m.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#E8F5E9] border border-[#A5D6A7]/40">
+                    <div className="w-8 h-8 rounded-full bg-[#2E7D32]/10 flex items-center justify-center text-[14px]">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2E7D32" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <span className="text-[14px] text-[#2D2A26] font-medium">Flatmate</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="ml-auto"><path d="M20 6L9 17l-5-5" stroke="#2E7D32" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {flatmates.length > 0 && (
             <div className="space-y-3 mb-6">
               {flatmates.map((f, i) => (
@@ -322,10 +356,10 @@ export default function OnboardingPage() {
             onClick={() => setStep('cuisines')}
             className="w-full bg-[#2D2A26] text-white py-4 rounded-2xl font-semibold text-[17px] hover:bg-[#45403A] transition-colors"
           >
-            {flatmates.length > 0 ? 'Continue' : "It's only me"}
+            {flatmates.length > 0 || existingMembers.length > 0 ? 'Continue' : "It's only me"}
           </button>
 
-          {flatmates.length === 0 && (
+          {flatmates.length === 0 && existingMembers.length === 0 && (
             <p className="text-center text-[13px] text-[#C5C0BA] mt-4">You can always invite people later from Settings.</p>
           )}
         </div>
@@ -379,7 +413,29 @@ export default function OnboardingPage() {
       {step === 'browse' && (
         <div>
           <h1 className="text-[28px] font-bold text-[#2D2A26] mb-1">Discover dishes</h1>
-          <p className="text-[#8C8680] text-[15px] mb-6">Swipe right on dishes you like. We&apos;ll remember your favourites.</p>
+          <p className="text-[#8C8680] text-[15px] mb-4">Swipe right on dishes you like. We&apos;ll remember your favourites.</p>
+
+          {/* Liked dishes strip */}
+          {likedDishes.length > 0 && (
+            <div className="mb-4 overflow-hidden">
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {likedDishes.map(d => (
+                  <div
+                    key={d.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold flex-shrink-0 border"
+                    style={{
+                      background: CUISINE_HEX[d.cuisine] || '#F5F0EA',
+                      borderColor: 'rgba(45,42,38,0.1)',
+                      animation: 'fadeInUp 0.3s cubic-bezier(0.16,1,0.3,1) both',
+                    }}
+                  >
+                    <span>{CUISINE_EMOJI[d.cuisine]}</span>
+                    <span className="text-[#2D2A26] max-w-[120px] truncate">{d.name_en}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {dishLoading ? (
             <div className="flex justify-center py-20">
