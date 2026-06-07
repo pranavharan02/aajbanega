@@ -16,10 +16,18 @@
   --font-sans: var(--font-dm-sans);
 }
 
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 body {
   background: #F5F0EA;
   color: #2D2A26;
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  position: relative;
 }
 
 /* Warm 3D card */

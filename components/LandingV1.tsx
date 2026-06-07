@@ -59,18 +59,18 @@ const FEATURES = [
 
 export default function LandingV1() {
   return (
-    <div className="landing-page">
+    <div className="landing-page overflow-hidden">
       {/* Hero */}
-      <div className="text-center pt-8 pb-16">
+      <div className="text-center pt-8 pb-12">
         <h1
-          className="text-[36px] font-extrabold text-[#2D2A26] leading-tight mb-3 tracking-tight"
+          className="text-[32px] sm:text-[36px] font-extrabold text-[#2D2A26] leading-tight mb-3 tracking-tight"
           style={{ animation: 'heroIn 0.7s cubic-bezier(0.16,1,0.3,1) both' }}
         >
           Your cook asks.<br />
           <span className="text-[#8C8680]">You&apos;re ready.</span>
         </h1>
         <p
-          className="text-[17px] text-[#8C8680] leading-relaxed max-w-sm mx-auto mb-8"
+          className="text-[16px] sm:text-[17px] text-[#8C8680] leading-relaxed max-w-sm mx-auto mb-8 px-2"
           style={{ animation: 'heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.1s both' }}
         >
           Plan meals for the week. Share recipes with your cook in Hindi or Marathi. No app needed.
@@ -78,7 +78,7 @@ export default function LandingV1() {
 
         <div
           className="mx-auto rounded-2xl overflow-hidden shadow-2xl border border-[#D1D7DB]/50"
-          style={{ maxWidth: '400px', animation: 'heroIn 0.7s cubic-bezier(0.16,1,0.3,1) 0.2s both' }}
+          style={{ maxWidth: '100%', width: '400px', animation: 'heroIn 0.7s cubic-bezier(0.16,1,0.3,1) 0.2s both' }}
         >
           <div className="flex items-center gap-3 px-4 py-3" style={{ background: '#075E54' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
@@ -98,7 +98,7 @@ export default function LandingV1() {
             </div>
             <div className="flex justify-start" style={{ animation: 'msgIn 0.4s cubic-bezier(0.16,1,0.3,1) 0.5s both' }}>
               <div className="relative rounded-lg rounded-tl-sm px-4 py-2 shadow-sm" style={{ background: '#FFFFFF', maxWidth: '80%' }}>
-                <p className="text-[18px] text-[#111B21] font-medium">aaj kya banaun? 🍳</p>
+                <p className="text-[15px] sm:text-[18px] text-[#111B21] font-medium">aaj kya banaun? 🍳</p>
                 <div className="flex items-center justify-end gap-1 -mb-0.5">
                   <span className="text-[11px]" style={{ color: '#667781' }}>6:32 pm</span>
                 </div>
@@ -106,7 +106,7 @@ export default function LandingV1() {
             </div>
             <div className="flex justify-end" style={{ animation: 'msgIn 0.4s cubic-bezier(0.16,1,0.3,1) 0.9s both' }}>
               <div className="relative rounded-lg rounded-tr-sm px-4 py-2 shadow-sm" style={{ background: '#D9FDD3', maxWidth: '85%' }}>
-                <p className="text-[18px] text-[#111B21] font-medium">ek second didi, bhej rahi hun 📋</p>
+                <p className="text-[15px] sm:text-[18px] text-[#111B21] font-medium">ek second didi, bhej rahi hun 📋</p>
                 <div className="flex items-center justify-end gap-1 -mb-0.5">
                   <span className="text-[11px]" style={{ color: '#667781' }}>6:32 pm</span>
                   <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M11.07 0.73L4.53 7.27L1.77 4.51L0.36 5.93L4.53 10.1L12.48 2.15L11.07 0.73Z" fill="#53BDEB"/><path d="M14.07 0.73L7.53 7.27L6.83 6.57L5.42 7.98L7.53 10.1L15.48 2.15L14.07 0.73Z" fill="#53BDEB"/></svg>
@@ -128,7 +128,7 @@ export default function LandingV1() {
             </div>
             <div className="flex justify-start" style={{ animation: 'msgIn 0.4s cubic-bezier(0.16,1,0.3,1) 1.7s both' }}>
               <div className="relative rounded-lg rounded-tl-sm px-4 py-2 shadow-sm" style={{ background: '#FFFFFF', maxWidth: '80%' }}>
-                <p className="text-[18px] text-[#111B21]">theek hai, shuru karti hun 👍</p>
+                <p className="text-[15px] sm:text-[18px] text-[#111B21]">theek hai, shuru karti hun 👍</p>
                 <div className="flex items-center justify-end gap-1 -mb-0.5">
                   <span className="text-[11px]" style={{ color: '#667781' }}>6:34 pm</span>
                 </div>
@@ -147,16 +147,16 @@ export default function LandingV1() {
         </div>
 
         <div
-          className="flex items-center justify-center gap-4 mt-8 mb-8"
+          className="flex items-center justify-center gap-2 sm:gap-4 mt-8 mb-8 flex-wrap"
           style={{ animation: 'heroIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s both' }}
         >
-          <span className="px-4 py-2 rounded-full bg-white text-[14px] font-semibold text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50 animate-float" style={{ animationDelay: '0s' }}>
+          <span className="px-3 sm:px-4 py-2 rounded-full bg-white text-[13px] sm:text-[14px] font-semibold text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50 animate-float" style={{ animationDelay: '0s' }}>
             🍛 216 dishes
           </span>
-          <span className="px-4 py-2 rounded-full bg-white text-[14px] font-semibold text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50 animate-float" style={{ animationDelay: '0.5s' }}>
+          <span className="px-3 sm:px-4 py-2 rounded-full bg-white text-[13px] sm:text-[14px] font-semibold text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50 animate-float" style={{ animationDelay: '0.5s' }}>
             🌍 13 cuisines
           </span>
-          <span className="px-4 py-2 rounded-full bg-white text-[14px] font-semibold text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50 animate-float" style={{ animationDelay: '1s' }}>
+          <span className="px-3 sm:px-4 py-2 rounded-full bg-white text-[13px] sm:text-[14px] font-semibold text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50 animate-float" style={{ animationDelay: '1s' }}>
             🗣️ 3 languages
           </span>
         </div>
@@ -173,20 +173,20 @@ export default function LandingV1() {
       </div>
 
       {/* Sticky scroll feature cards */}
-      <div className="relative" style={{ marginLeft: '-20px', marginRight: '-20px' }}>
+      <div className="relative">
         {FEATURES.map((f, i) => (
-          <div key={f.num} className="sticky px-5" style={{ top: `${100 + i * 16}px`, zIndex: i + 1, paddingBottom: '24px' }}>
+          <div key={f.num} className="sticky" style={{ top: `${100 + i * 16}px`, zIndex: i + 1, paddingBottom: '24px' }}>
             <Reveal>
               <div
-                className="rounded-3xl p-8 shadow-lg border border-white/60"
-                style={{ background: f.accent, minHeight: '280px' }}
+                className="rounded-3xl p-6 sm:p-8 shadow-lg border border-white/60"
+                style={{ background: f.accent, minHeight: '240px' }}
               >
-                <div className="flex items-start justify-between mb-5">
+                <div className="flex items-start justify-between mb-4">
                   <span className="text-[13px] font-bold text-[#2D2A26]/40 tracking-widest uppercase">{f.num}</span>
-                  <span className="text-4xl">{f.icon}</span>
+                  <span className="text-3xl sm:text-4xl">{f.icon}</span>
                 </div>
-                <h3 className="text-[28px] font-extrabold text-[#2D2A26] leading-tight mb-3">{f.title}</h3>
-                <p className="text-[16px] text-[#2D2A26]/70 leading-relaxed max-w-md">{f.desc}</p>
+                <h3 className="text-[24px] sm:text-[28px] font-extrabold text-[#2D2A26] leading-tight mb-3">{f.title}</h3>
+                <p className="text-[15px] sm:text-[16px] text-[#2D2A26]/70 leading-relaxed">{f.desc}</p>
               </div>
             </Reveal>
           </div>
@@ -194,9 +194,9 @@ export default function LandingV1() {
       </div>
 
       {/* Plan together */}
-      <div className="py-20">
+      <div className="py-16">
         <Reveal>
-          <h2 className="text-[28px] font-extrabold text-[#2D2A26] text-center leading-tight mb-4">
+          <h2 className="text-[24px] sm:text-[28px] font-extrabold text-[#2D2A26] text-center leading-tight mb-4">
             Plan together with<br />flatmates & family
           </h2>
           <p className="text-[16px] text-[#8C8680] text-center max-w-sm mx-auto mb-10 leading-relaxed">
@@ -269,8 +269,8 @@ export default function LandingV1() {
 
       {/* Cuisines marquee */}
       <Reveal>
-        <div className="py-10 overflow-hidden" style={{ marginLeft: '-20px', marginRight: '-20px' }}>
-          <h2 className="text-[22px] font-bold text-[#2D2A26] mb-6 text-center px-5">13 cuisines, one app</h2>
+        <div className="py-10 overflow-hidden">
+          <h2 className="text-[22px] font-bold text-[#2D2A26] mb-6 text-center">13 cuisines, one app</h2>
           <div className="space-y-3">
             <div className="relative">
               <div className="flex gap-3 animate-marquee whitespace-nowrap">
