@@ -193,3 +193,17 @@ input[type="range"]::-webkit-slider-thumb {
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
+
+@keyframes slotScroll {
+  0%, 11% { transform: translateY(0); }
+  14%, 25% { transform: translateY(-80px); }
+  28%, 39% { transform: translateY(-160px); }
+  42%, 53% { transform: translateY(-240px); }
+  57%, 68% { transform: translateY(-320px); }
+  71%, 82% { transform: translateY(-400px); }
+  86%, 97% { transform: translateY(-480px); }
+}
+
+.animate-slot-scroll {
+  animation: slotScroll 14s ease-in-out infinite;
+}

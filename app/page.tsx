@@ -29,7 +29,7 @@ const FEATURES = [
 
 const CUISINES = [
   '🥥 Tamil', '🫓 North Indian', '🌶 Marathi', '🫘 Bihari', '🫙 Gujarati', '🐟 Bengali',
-  '🌴 Kerala', '🔥 Andhra', '🦐 Goan', '🏜️ Rajasthani', '🧈 Punjabi', '🏔️ Kashmiri', '🥑 Café',
+  '🌴 Kerala', '🔥 Andhra', '🦐 Goan', '🏜️ Rajasthani', '🧈 Punjabi', '🏔️ Kashmiri', '🥑 Cafe',
 ]
 
 const STEPS = [
@@ -46,6 +46,16 @@ const DIETS = [
   { name: 'Low Carb', desc: 'Under 100g carbs/day' },
   { name: 'Cutting', desc: 'Low cal, high protein' },
   { name: 'Bulking', desc: 'Calorie surplus' },
+]
+
+const MENU_ITEMS = [
+  { day: 'Mon', emoji: '🍛', dish: 'Paneer Butter Masala' },
+  { day: 'Tue', emoji: '🍗', dish: 'Chicken Biryani' },
+  { day: 'Wed', emoji: '🫓', dish: 'Chole Bhature' },
+  { day: 'Thu', emoji: '🍲', dish: 'Sambar Vada' },
+  { day: 'Fri', emoji: '🧈', dish: 'Dal Makhani' },
+  { day: 'Sat', emoji: '🥘', dish: 'Mutton Rogan Josh' },
+  { day: 'Sun', emoji: '🍛', dish: 'Rajma Chawal' },
 ]
 
 export default async function LandingPage() {
@@ -96,7 +106,7 @@ export default async function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="text-center pt-8 pb-12">
+      <section className="text-center pt-8 pb-6">
         <h1 className="text-[32px] sm:text-[36px] font-extrabold text-[#2D2A26] leading-tight mb-3 tracking-tight">
           Your cook asks.<br />
           <span className="text-[#8C8680]">You&apos;re ready.</span>
@@ -105,10 +115,43 @@ export default async function LandingPage() {
           Plan meals for the week. Share recipes with your cook in Hindi or Marathi. No app needed.
         </p>
 
-        {/* WhatsApp mockup */}
+        {/* Slot Machine */}
+        <div className="relative mx-auto max-w-md mb-10">
+          <div className="h-[80px] overflow-hidden relative rounded-2xl bg-[#FFFDF9] border border-[#E5DFD6] shadow-lg">
+            {/* Top gradient mask */}
+            <div className="absolute top-0 left-0 right-0 h-5 bg-gradient-to-b from-[#FFFDF9] to-transparent z-10 pointer-events-none" />
+            {/* Bottom gradient mask */}
+            <div className="absolute bottom-0 left-0 right-0 h-5 bg-gradient-to-t from-[#FFFDF9] to-transparent z-10 pointer-events-none" />
+            {/* Scrolling strip */}
+            <div className="animate-slot-scroll">
+              {MENU_ITEMS.map((item) => (
+                <div key={item.day} className="h-[80px] flex items-center justify-center gap-3 px-4 sm:px-6">
+                  <span className="text-[13px] font-semibold text-[#C5C0BA] tracking-wide uppercase w-8 sm:w-10 text-right">{item.day}</span>
+                  <span className="text-[28px] sm:text-[32px]">{item.emoji}</span>
+                  <span className="text-[16px] sm:text-[19px] font-bold text-[#2D2A26] text-left">{item.dish}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <Link
+          href="/login"
+          className="inline-block bg-[#2D2A26] text-white px-12 py-4 rounded-2xl font-bold text-[19px] hover:bg-[#45403A] transition-all shadow-xl"
+        >
+          Start Planning
+        </Link>
+        <p className="text-[13px] text-[#C5C0BA] mt-4">Free. No downloads. Works on any phone.</p>
+      </section>
+
+      {/* WhatsApp Preview */}
+      <section className="py-10 text-center">
+        <h2 className="text-[20px] sm:text-[22px] font-bold text-[#2D2A26] mb-2">Share with your cook in one tap</h2>
+        <p className="text-[15px] text-[#8C8680] mb-6">Your cook gets today&apos;s recipe in Hindi — no app needed.</p>
+
         <div
-          className="mx-auto rounded-2xl overflow-hidden shadow-2xl border border-[#D1D7DB]/50"
-          style={{ maxWidth: '100%', width: '400px' }}
+          className="mx-auto rounded-2xl overflow-hidden shadow-xl border border-[#D1D7DB]/50"
+          style={{ maxWidth: '100%', width: '360px' }}
         >
           <div className="flex items-center gap-3 px-4 py-3" style={{ background: '#075E54' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
@@ -139,31 +182,10 @@ export default async function LandingPage() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end">
-              <div className="relative rounded-lg rounded-tr-sm shadow-sm overflow-hidden" style={{ background: '#D9FDD3', maxWidth: '85%' }}>
-                <div className="px-3 py-2" style={{ background: '#E2F7CB' }}>
-                  <p className="text-[11px] font-medium" style={{ color: '#5B7A3D' }}>aajbanega.com</p>
-                  <p className="text-[14px] text-[#111B21] font-semibold mt-0.5">Today&apos;s Menu — Paneer Butter Masala</p>
-                  <p className="text-[12px] text-[#667781] mt-0.5">Step-by-step recipe in Hindi</p>
-                </div>
-                <div className="px-4 py-1.5 flex items-center justify-end gap-1">
-                  <span className="text-[11px]" style={{ color: '#667781' }}>6:33 pm</span>
-                  <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M11.07 0.73L4.53 7.27L1.77 4.51L0.36 5.93L4.53 10.1L12.48 2.15L11.07 0.73Z" fill="#53BDEB"/><path d="M14.07 0.73L7.53 7.27L6.83 6.57L5.42 7.98L7.53 10.1L15.48 2.15L14.07 0.73Z" fill="#53BDEB"/></svg>
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-start">
-              <div className="relative rounded-lg rounded-tl-sm px-4 py-2 shadow-sm" style={{ background: '#FFFFFF', maxWidth: '80%' }}>
-                <p className="text-[15px] sm:text-[18px] text-[#111B21]">theek hai, shuru karti hun 👍</p>
-                <div className="flex items-center justify-end gap-1 -mb-0.5">
-                  <span className="text-[11px]" style={{ color: '#667781' }}>6:34 pm</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-2 sm:gap-4 mt-8 mb-8 flex-wrap">
+        <div className="flex items-center justify-center gap-2 sm:gap-4 mt-8 flex-wrap">
           <span className="px-3 sm:px-4 py-2 rounded-full bg-white text-[13px] sm:text-[14px] font-semibold text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50">
             🍛 216 dishes
           </span>
@@ -174,14 +196,6 @@ export default async function LandingPage() {
             🗣️ 3 languages
           </span>
         </div>
-
-        <Link
-          href="/login"
-          className="inline-block bg-[#2D2A26] text-white px-12 py-4 rounded-2xl font-bold text-[19px] hover:bg-[#45403A] transition-all shadow-xl"
-        >
-          Start Planning
-        </Link>
-        <p className="text-[13px] text-[#C5C0BA] mt-4">Free. No downloads. Works on any phone.</p>
       </section>
 
       {/* Feature cards */}
