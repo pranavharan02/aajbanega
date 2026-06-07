@@ -27,7 +27,7 @@ function checkRateLimit(householdId: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { household_id, week_start_date, veg_days, cuisines, meals = ['dinner'] as MealType[] } = body
+    const { household_id, week_start_date, veg_days, cuisines, meals = ['dinner'] as MealType[], diet_mode, daily_calories, daily_protein_g, daily_carbs_g, daily_fat_g } = body
 
     if (!household_id || !week_start_date || !cuisines?.length) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -126,10 +126,10 @@ Respond in JSON only:
           throw new Error('No JSON in AI response')
         }
       } catch {
-        menuPicks = await generateMenuAlgorithmic({ vegDays: veg_days, cuisines, meals, excludeSlugs })
+        menuPicks = await generateMenuAlgorithmic({ vegDays: veg_days, cuisines, meals, excludeSlugs, dietMode: diet_mode, dailyCalories: daily_calories, dailyProtein: daily_protein_g, dailyCarbs: daily_carbs_g, dailyFat: daily_fat_g })
       }
     } else {
-      menuPicks = await generateMenuAlgorithmic({ vegDays: veg_days, cuisines, meals, excludeSlugs })
+      menuPicks = await generateMenuAlgorithmic({ vegDays: veg_days, cuisines, meals, excludeSlugs, dietMode: diet_mode, dailyCalories: daily_calories, dailyProtein: daily_protein_g, dailyCarbs: daily_carbs_g, dailyFat: daily_fat_g })
     }
 
     const { data: menu, error: menuErr } = await supabase

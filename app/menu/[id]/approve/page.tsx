@@ -11,6 +11,7 @@ const CUISINE_BG: Record<string, string> = {
   tamil: '#E8D5C4', north: '#F5E6CC', marathi: '#D4E8D4', bihari: '#E8DCC8',
   gujarati: '#F5E8D0', bengali: '#E8D4D4', kerala: '#C8E8D4', andhra: '#E8D0C4',
   goan: '#D4D8E8', rajasthani: '#E8E0C8', punjabi: '#F0E4CC', kashmiri: '#D8D4E8', custom: '#F0EDE8',
+  cafe: '#C8E6C9',
 }
 
 interface DayGroup {

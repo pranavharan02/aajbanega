@@ -1,4 +1,4 @@
-const CACHE_NAME = 'akb-v1'
+const CACHE_NAME = 'akb-v2'
 const OFFLINE_URL = '/offline.html'
 
 const PRECACHE = [

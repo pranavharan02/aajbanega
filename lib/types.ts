@@ -62,6 +62,11 @@ export interface Household {
   default_veg_days: number
   preferred_cook_lang: string
   default_meals: MealType[]
+  diet_mode: DietMode | null
+  daily_calories: number | null
+  daily_protein_g: number | null
+  daily_carbs_g: number | null
+  daily_fat_g: number | null
 }
 
 export interface WeeklyMenu {
@@ -109,8 +114,9 @@ export interface ShoppingListItem {
 }
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner'
-export type CuisineType = 'tamil' | 'north' | 'marathi' | 'bihari' | 'gujarati' | 'bengali' | 'kerala' | 'andhra' | 'goan' | 'rajasthani' | 'punjabi' | 'kashmiri' | 'custom'
+export type CuisineType = 'tamil' | 'north' | 'marathi' | 'bihari' | 'gujarati' | 'bengali' | 'kerala' | 'andhra' | 'goan' | 'rajasthani' | 'punjabi' | 'kashmiri' | 'cafe' | 'custom'
 export type Language = 'en' | 'hi' | 'mr'
+export type DietMode = 'regular' | 'high-protein' | 'keto' | 'low-carb' | 'cutting' | 'bulking'
 
 export const MEAL_LABELS: Record<MealType, string> = {
   breakfast: 'Breakfast',
@@ -122,6 +128,12 @@ export const MEAL_EMOJI: Record<MealType, string> = {
   breakfast: '🌅',
   lunch: '🌞',
   dinner: '🌙',
+}
+
+export const MEAL_COLORS: Record<MealType, { color: string; bg: string; activeBg: string; border: string }> = {
+  breakfast: { color: '#E07B39', bg: '#FDF2E9', activeBg: '#F8DCC4', border: '#E9A872' },
+  lunch:     { color: '#C49A2B', bg: '#FBF5E6', activeBg: '#F5E6B8', border: '#D4B44A' },
+  dinner:    { color: '#1E3A5F', bg: '#E8EDF4', activeBg: '#C4D1E3', border: '#6882A6' },
 }
 
 export const MEAL_ORDER: MealType[] = ['breakfast', 'lunch', 'dinner']
@@ -139,6 +151,21 @@ export const CUISINE_LABELS: Record<string, string> = {
   rajasthani: 'Rajasthani',
   punjabi: 'Punjabi',
   kashmiri: 'Kashmiri',
+  cafe: 'Café',
+}
+
+export const CUISINE_EMOJI: Record<string, string> = {
+  tamil: '🥥', north: '🫓', marathi: '🌶', bihari: '🫘',
+  gujarati: '🫙', bengali: '🐟', kerala: '🌴', andhra: '🔥',
+  goan: '🦐', rajasthani: '🏜️', punjabi: '🧈', kashmiri: '🏔️',
+  cafe: '🥑',
+}
+
+export const CUISINE_HEX: Record<string, string> = {
+  tamil: '#E8D5C4', north: '#F5E6CC', marathi: '#D4E8D4', bihari: '#E8DCC8',
+  gujarati: '#F5E8D0', bengali: '#E8D4D4', kerala: '#C8E8D4', andhra: '#E8D0C4',
+  goan: '#D4D8E8', rajasthani: '#E8E0C8', punjabi: '#F0E4CC', kashmiri: '#D8D4E8',
+  cafe: '#C8E6C9',
 }
 
 export const CUISINE_COLORS: Record<string, string> = {
@@ -154,6 +181,16 @@ export const CUISINE_COLORS: Record<string, string> = {
   rajasthani: 'bg-[#E8E0C8]',
   punjabi: 'bg-[#F0E4CC]',
   kashmiri: 'bg-[#D8D4E8]',
+  cafe: 'bg-[#C8E6C9]',
+}
+
+export const DIET_MODES: Record<DietMode, { label: string; emoji: string; desc: string; color: string; bg: string; macros: { cal: number; protein: number; carbs: number; fat: number } | null }> = {
+  'regular':      { label: 'Regular',      emoji: '🍽️', desc: 'Balanced meals',          color: '#8C8680', bg: '#F5F0EA', macros: null },
+  'high-protein': { label: 'High Protein', emoji: '💪', desc: '30g+ protein per meal',   color: '#D84315', bg: '#FBE9E7', macros: { cal: 2200, protein: 180, carbs: 200, fat: 70 } },
+  'keto':         { label: 'Keto',         emoji: '🥑', desc: 'High fat, very low carb', color: '#2E7D32', bg: '#E8F5E9', macros: { cal: 1800, protein: 120, carbs: 30, fat: 140 } },
+  'low-carb':     { label: 'Low Carb',     emoji: '🥗', desc: 'Under 100g carbs/day',    color: '#1565C0', bg: '#E3F2FD', macros: { cal: 1800, protein: 140, carbs: 80, fat: 90 } },
+  'cutting':      { label: 'Cutting',      emoji: '✂️', desc: 'Low cal, high protein',    color: '#C62828', bg: '#FFEBEE', macros: { cal: 1500, protein: 160, carbs: 120, fat: 45 } },
+  'bulking':      { label: 'Bulking',      emoji: '🏋️', desc: 'High cal, high protein',   color: '#6A1B9A', bg: '#F3E5F5', macros: { cal: 3000, protein: 200, carbs: 350, fat: 100 } },
 }
 
 export const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']

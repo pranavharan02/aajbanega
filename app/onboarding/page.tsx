@@ -1,20 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { createSupabaseBrowser } from '@/lib/supabase-browser'
 import { getHouseholdId, setHouseholdId } from '@/lib/household'
-import { CUISINE_LABELS, MEAL_LABELS, MEAL_EMOJI, MEAL_ORDER, type CuisineType, type MealType } from '@/lib/types'
+import {
+  CUISINE_LABELS, CUISINE_EMOJI, CUISINE_HEX,
+  type CuisineType, type Dish,
+} from '@/lib/types'
 
-const CUISINES: CuisineType[] = ['tamil', 'north', 'marathi', 'bihari', 'gujarati', 'bengali', 'kerala', 'andhra', 'goan', 'rajasthani', 'punjabi', 'kashmiri']
-const CUISINE_EMOJI: Record<string, string> = {
-  tamil: '🥥', north: '🫓', marathi: '🌶', bihari: '🫘',
-  gujarati: '🫙', bengali: '🐟', kerala: '🌴', andhra: '🔥',
-  goan: '🦐', rajasthani: '🏜️', punjabi: '🧈', kashmiri: '🏔️',
-}
+const CUISINES: CuisineType[] = ['tamil', 'north', 'marathi', 'bihari', 'gujarati', 'bengali', 'kerala', 'andhra', 'goan', 'rajasthani', 'punjabi', 'kashmiri', 'cafe']
 
-type Step = 'name' | 'household' | 'preferences'
+type Step = 'name' | 'household' | 'cuisines' | 'browse'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -25,21 +23,26 @@ export default function OnboardingPage() {
   const [name, setName] = useState('')
   const [flatmates, setFlatmates] = useState<{ contact: string }[]>([])
   const [selectedCuisines, setSelectedCuisines] = useState<CuisineType[]>(['tamil', 'north'])
-  const [selectedMeals, setSelectedMeals] = useState<MealType[]>(['dinner'])
-  const [vegDays, setVegDays] = useState(4)
   const [saving, setSaving] = useState(false)
   const [invitesSent, setInvitesSent] = useState(false)
   const [householdId, setHhId] = useState<string | null>(null)
   const [inviteCode, setInviteCode] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
 
-  // On mount: check if household already exists (from test-login or auth)
+  // Browse state
+  const [dishes, setDishes] = useState<Dish[]>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [liked, setLiked] = useState<string[]>([])
+  const [dishLoading, setDishLoading] = useState(false)
+  const [swipeDir, setSwipeDir] = useState<'left' | 'right' | null>(null)
+  const [dragX, setDragX] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const startX = useRef(0)
+
   useEffect(() => {
     async function init() {
       const cookieHhId = getHouseholdId()
-
       if (cookieHhId) {
-        // Household exists (test-login created it) — load its data and skip to step 2
         const { data } = await supabase.from('households').select('id, name, invite_code').eq('id', cookieHhId).single()
         if (data) {
           setHhId(data.id)
@@ -50,9 +53,7 @@ export default function OnboardingPage() {
           return
         }
       }
-
       if (user) {
-        // Check if auth user has a household
         const { data } = await supabase.from('households').select('id, name, invite_code').eq('user_id', user.id).single()
         if (data) {
           setHhId(data.id)
@@ -65,7 +66,6 @@ export default function OnboardingPage() {
         }
         setName(user.user_metadata?.full_name || '')
       }
-
       setReady(true)
     }
     init()
@@ -74,12 +74,9 @@ export default function OnboardingPage() {
   async function handleNameNext() {
     if (!name.trim()) return
     setSaving(true)
-
     if (householdId) {
-      // Update existing household name
       await supabase.from('households').update({ name: name.trim() }).eq('id', householdId)
     } else {
-      // Create new household
       const { data } = await supabase
         .from('households')
         .insert({
@@ -93,7 +90,6 @@ export default function OnboardingPage() {
         })
         .select('id, invite_code')
         .single()
-
       if (data) {
         setHhId(data.id)
         setInviteCode(data.invite_code)
@@ -104,17 +100,9 @@ export default function OnboardingPage() {
     setStep('household')
   }
 
-  function addFlatmate() {
-    setFlatmates(prev => [...prev, { contact: '' }])
-  }
-
-  function updateFlatmate(index: number, contact: string) {
-    setFlatmates(prev => prev.map((f, i) => i === index ? { contact } : f))
-  }
-
-  function removeFlatmate(index: number) {
-    setFlatmates(prev => prev.filter((_, i) => i !== index))
-  }
+  function addFlatmate() { setFlatmates(prev => [...prev, { contact: '' }]) }
+  function updateFlatmate(index: number, contact: string) { setFlatmates(prev => prev.map((f, i) => i === index ? { contact } : f)) }
+  function removeFlatmate(index: number) { setFlatmates(prev => prev.filter((_, i) => i !== index)) }
 
   function getInviteUrl() {
     if (typeof window === 'undefined' || !inviteCode) return ''
@@ -129,14 +117,71 @@ export default function OnboardingPage() {
   }
 
   function sendAllInvites() {
-    const valid = flatmates.filter(f => f.contact.trim())
-    valid.forEach(f => sendWhatsAppInvite(f.contact))
+    flatmates.filter(f => f.contact.trim()).forEach(f => sendWhatsAppInvite(f.contact))
     setInvitesSent(true)
   }
 
+  // Load dishes for selected cuisines when entering browse step
+  const loadDishes = useCallback(async () => {
+    setDishLoading(true)
+    const { data } = await supabase
+      .from('dishes')
+      .select('*')
+      .in('cuisine', selectedCuisines)
+      .order('name_en')
+    if (data) {
+      const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, 30)
+      setDishes(shuffled as Dish[])
+      setCurrentIndex(0)
+      setLiked([])
+    }
+    setDishLoading(false)
+  }, [selectedCuisines, supabase])
+
+  function startBrowse() {
+    if (selectedCuisines.length === 0) return
+    setStep('browse')
+    loadDishes()
+  }
+
+  // Swipe handlers
+  const currentDish = dishes[currentIndex]
+  const remaining = dishes.length - currentIndex
+
+  function handleSwipe(direction: 'left' | 'right') {
+    if (!currentDish) return
+    setSwipeDir(direction)
+    if (direction === 'right') setLiked(prev => [...prev, currentDish.id])
+    setTimeout(() => {
+      setCurrentIndex(prev => prev + 1)
+      setSwipeDir(null)
+      setDragX(0)
+    }, 300)
+  }
+
+  function handleTouchStart(e: React.TouchEvent | React.MouseEvent) {
+    const x = 'touches' in e ? e.touches[0].clientX : e.clientX
+    startX.current = x
+    setDragging(true)
+  }
+  function handleTouchMove(e: React.TouchEvent | React.MouseEvent) {
+    if (!dragging) return
+    const x = 'touches' in e ? e.touches[0].clientX : e.clientX
+    setDragX(x - startX.current)
+  }
+  function handleTouchEnd() {
+    if (!dragging) return
+    setDragging(false)
+    if (Math.abs(dragX) > 100) {
+      handleSwipe(dragX > 0 ? 'right' : 'left')
+    } else {
+      setDragX(0)
+    }
+  }
+
   async function handleFinish() {
-    if (!householdId) {
-      // Safety: shouldn't happen, but create household if missing
+    const hhId = householdId
+    if (!hhId) {
       const { data } = await supabase
         .from('households')
         .insert({
@@ -144,9 +189,9 @@ export default function OnboardingPage() {
           name: name.trim() || 'My Household',
           default_servings: 2,
           default_cuisines: selectedCuisines,
-          default_veg_days: vegDays,
+          default_veg_days: 4,
           preferred_cook_lang: 'hi',
-          default_meals: selectedMeals,
+          default_meals: ['dinner'],
           onboarding_done: true,
         })
         .select('id')
@@ -159,13 +204,17 @@ export default function OnboardingPage() {
     setSaving(true)
     await supabase.from('households').update({
       default_cuisines: selectedCuisines,
-      default_veg_days: vegDays,
-      default_meals: selectedMeals,
       onboarding_done: true,
-    }).eq('id', householdId)
+    }).eq('id', hhId)
     setSaving(false)
     router.push('/')
   }
+
+  const rotation = dragX * 0.05
+  const opacity = Math.max(0.5, 1 - Math.abs(dragX) / 400)
+
+  const allSteps: Step[] = ['name', 'household', 'cuisines', 'browse']
+  const stepIndex = allSteps.indexOf(step)
 
   if (!ready) {
     return (
@@ -179,12 +228,11 @@ export default function OnboardingPage() {
     <div className="py-8 max-w-md mx-auto">
       {/* Progress */}
       <div className="flex gap-2 mb-10">
-        {(['name', 'household', 'preferences'] as Step[]).map((s, i) => (
+        {allSteps.map((s, i) => (
           <div
             key={s}
             className={`flex-1 h-1.5 rounded-full transition-colors ${
-              i <= ['name', 'household', 'preferences'].indexOf(step)
-                ? 'bg-[#2D2A26]' : 'bg-[#E5DFD6]'
+              i <= stepIndex ? 'bg-[#2D2A26]' : 'bg-[#E5DFD6]'
             }`}
           />
         ))}
@@ -193,8 +241,8 @@ export default function OnboardingPage() {
       {/* Step 1: Name */}
       {step === 'name' && (
         <div>
-          <h1 className="text-[28px] font-bold text-[#2D2A26] mb-2">What's your name?</h1>
-          <p className="text-[#8C8680] text-[16px] mb-8">So your household knows who's planning the meals.</p>
+          <h1 className="text-[28px] font-bold text-[#2D2A26] mb-2">What&apos;s your name?</h1>
+          <p className="text-[#8C8680] text-[16px] mb-8">So your household knows who&apos;s planning the meals.</p>
           <input
             type="text"
             value={name}
@@ -248,7 +296,7 @@ export default function OnboardingPage() {
             <div className="w-11 h-11 rounded-xl bg-[#F5F0EA] flex items-center justify-center text-[20px]">+</div>
             <div>
               <p className="font-semibold text-[16px] text-[#2D2A26]">Add a flatmate</p>
-              <p className="text-[13px] text-[#8C8680]">They'll get a WhatsApp invite to join</p>
+              <p className="text-[13px] text-[#8C8680]">They&apos;ll get a WhatsApp invite to join</p>
             </div>
           </button>
 
@@ -270,7 +318,7 @@ export default function OnboardingPage() {
           )}
 
           <button
-            onClick={() => setStep('preferences')}
+            onClick={() => setStep('cuisines')}
             className="w-full bg-[#2D2A26] text-white py-4 rounded-2xl font-semibold text-[17px] hover:bg-[#45403A] transition-colors"
           >
             {flatmates.length > 0 ? 'Continue' : "It's only me"}
@@ -282,68 +330,215 @@ export default function OnboardingPage() {
         </div>
       )}
 
-      {/* Step 3: Preferences */}
-      {step === 'preferences' && (
+      {/* Step 3: Pick cuisines */}
+      {step === 'cuisines' && (
         <div>
-          <h1 className="text-[28px] font-bold text-[#2D2A26] mb-2">Set your preferences</h1>
-          <p className="text-[#8C8680] text-[16px] mb-8">Pick your cuisines and meal routine. You can change these anytime.</p>
+          <h1 className="text-[28px] font-bold text-[#2D2A26] mb-2">Plan your first menu</h1>
+          <p className="text-[#8C8680] text-[16px] mb-8">Pick the cuisines you love. We&apos;ll show you dishes to browse next.</p>
 
-          <div className="mb-8">
-            <h2 className="text-[15px] font-semibold text-[#2D2A26] mb-3">Meals to plan</h2>
-            <div className="flex gap-2">
-              {MEAL_ORDER.map(m => (
-                <button
-                  key={m}
-                  onClick={() => setSelectedMeals(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])}
-                  className={`flex-1 py-3 rounded-xl text-[14px] font-semibold text-center transition-all ${
-                    selectedMeals.includes(m)
-                      ? 'bg-[#2D2A26] text-white' : 'bg-[#FFFDF9] border border-[#E5DFD6] text-[#2D2A26]'
-                  }`}
-                >
-                  {MEAL_EMOJI[m]} {MEAL_LABELS[m]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <h2 className="text-[15px] font-semibold text-[#2D2A26] mb-3">Veg / Non-Veg split</h2>
-            <div className="card p-5">
-              <div className="flex justify-between text-[15px] mb-3">
-                <span className="text-[#2E7D32] font-semibold">{vegDays} veg</span>
-                <span className="text-[#C62828] font-semibold">{7 - vegDays} non-veg</span>
-              </div>
-              <input type="range" min={0} max={7} value={vegDays} onChange={e => setVegDays(Number(e.target.value))} className="w-full" />
-            </div>
-          </div>
-
-          <div className="mb-10">
-            <h2 className="text-[15px] font-semibold text-[#2D2A26] mb-3">Favourite cuisines</h2>
-            <div className="grid grid-cols-3 gap-2">
-              {CUISINES.map(c => (
+          <div className="grid grid-cols-3 gap-2.5 mb-10">
+            {CUISINES.map(c => {
+              const sel = selectedCuisines.includes(c)
+              return (
                 <button
                   key={c}
                   onClick={() => setSelectedCuisines(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])}
-                  className={`py-3 px-2 rounded-xl text-[13px] font-semibold text-center transition-all ${
-                    selectedCuisines.includes(c)
-                      ? 'bg-[#2D2A26] text-white' : 'bg-[#FFFDF9] border border-[#E5DFD6] text-[#2D2A26]'
-                  }`}
+                  className="relative py-3.5 px-2 rounded-xl text-[13px] font-semibold text-center transition-all border-2"
+                  style={{
+                    background: sel ? CUISINE_HEX[c] : '#FFFDF9',
+                    borderColor: sel ? '#2D2A26' : '#E5DFD6',
+                    color: '#2D2A26',
+                  }}
                 >
                   {CUISINE_EMOJI[c]} {CUISINE_LABELS[c]}
+                  {sel && (
+                    <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#2D2A26] flex items-center justify-center">
+                      <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                  )}
                 </button>
-              ))}
-            </div>
+              )
+            })}
           </div>
 
           <button
-            onClick={handleFinish}
-            disabled={saving || selectedCuisines.length === 0 || selectedMeals.length === 0}
+            onClick={startBrowse}
+            disabled={selectedCuisines.length === 0}
             className="w-full bg-[#2D2A26] text-white py-4 rounded-2xl font-semibold text-[17px] hover:bg-[#45403A] transition-colors disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Start Planning'}
+            Browse Dishes
           </button>
+          <p className="text-center text-[13px] text-[#C5C0BA] mt-3">
+            {selectedCuisines.length} cuisine{selectedCuisines.length !== 1 ? 's' : ''} selected
+          </p>
         </div>
       )}
+
+      {/* Step 4: Browse dishes (swipe) */}
+      {step === 'browse' && (
+        <div>
+          <h1 className="text-[28px] font-bold text-[#2D2A26] mb-1">Discover dishes</h1>
+          <p className="text-[#8C8680] text-[15px] mb-6">Swipe right on dishes you like. We&apos;ll remember your favourites.</p>
+
+          {dishLoading ? (
+            <div className="flex justify-center py-20">
+              <div className="w-8 h-8 border-3 border-[#2D2A26] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : !currentDish ? (
+            /* Done swiping */
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">{liked.length > 0 ? '🎉' : '👍'}</div>
+              <h2 className="text-xl font-bold text-[#2D2A26] mb-2">
+                {liked.length > 0 ? `You liked ${liked.length} dish${liked.length !== 1 ? 'es' : ''}!` : 'All done!'}
+              </h2>
+              <p className="text-[#8C8680] mb-8">
+                {liked.length > 0 ? "Your favourites are saved. Let's start planning." : "No worries — you can browse anytime from the menu."}
+              </p>
+              <button
+                onClick={handleFinish}
+                disabled={saving}
+                className="w-full bg-[#2D2A26] text-white py-4 rounded-2xl font-semibold text-[17px] hover:bg-[#45403A] transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Setting up...' : 'Go to Dashboard'}
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Card stack */}
+              <div className="relative mx-auto" style={{ maxWidth: '340px', height: '400px' }}>
+                {/* Next card preview */}
+                {dishes[currentIndex + 1] && (
+                  <div
+                    className="absolute inset-0 card p-0 overflow-hidden"
+                    style={{ transform: 'scale(0.95) translateY(10px)', opacity: 0.5 }}
+                  >
+                    <SwipeCardContent dish={dishes[currentIndex + 1]} />
+                  </div>
+                )}
+
+                {/* Current card */}
+                <div
+                  className="absolute inset-0 card p-0 overflow-hidden cursor-grab active:cursor-grabbing select-none"
+                  style={{
+                    transform: swipeDir ? undefined : `translateX(${dragX}px) rotate(${rotation}deg)`,
+                    opacity: swipeDir ? undefined : opacity,
+                    animation: swipeDir === 'left'
+                      ? 'slideOutLeft 0.3s cubic-bezier(0.16,1,0.3,1) forwards'
+                      : swipeDir === 'right'
+                      ? 'slideOutRight 0.3s cubic-bezier(0.16,1,0.3,1) forwards'
+                      : !dragging && dragX === 0 ? 'cardEnter 0.3s cubic-bezier(0.16,1,0.3,1) both' : undefined,
+                    transition: dragging ? 'none' : 'transform 0.2s, opacity 0.2s',
+                    zIndex: 2,
+                  }}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  onMouseDown={handleTouchStart}
+                  onMouseMove={handleTouchMove}
+                  onMouseUp={handleTouchEnd}
+                  onMouseLeave={() => { if (dragging) handleTouchEnd() }}
+                >
+                  {dragX > 40 && (
+                    <div className="absolute top-5 left-5 z-10 px-4 py-2 rounded-xl border-3 border-[#2E7D32] text-[#2E7D32] font-bold text-lg rotate-[-12deg]" style={{ background: 'rgba(232,245,233,0.9)' }}>
+                      LIKE
+                    </div>
+                  )}
+                  {dragX < -40 && (
+                    <div className="absolute top-5 right-5 z-10 px-4 py-2 rounded-xl border-3 border-[#C62828] text-[#C62828] font-bold text-lg rotate-[12deg]" style={{ background: 'rgba(255,235,238,0.9)' }}>
+                      SKIP
+                    </div>
+                  )}
+                  <SwipeCardContent dish={currentDish} />
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center justify-center gap-6 mt-6">
+                <button
+                  onClick={() => handleSwipe('left')}
+                  className="w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                  style={{ background: '#FFEBEE', border: '2px solid #EF9A9A' }}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="#C62828" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                </button>
+                <div className="text-center">
+                  <span className="text-[13px] text-[#8C8680] font-medium">{remaining} left</span>
+                </div>
+                <button
+                  onClick={() => handleSwipe('right')}
+                  className="w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                  style={{ background: '#E8F5E9', border: '2px solid #A5D6A7' }}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.501 5.501 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="#2E7D32" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+              </div>
+
+              {liked.length > 0 && (
+                <div className="text-center mt-4">
+                  <span className="px-4 py-2 rounded-full bg-[#E8F5E9] text-[#2E7D32] text-[13px] font-semibold">
+                    {liked.length} liked
+                  </span>
+                </div>
+              )}
+
+              {/* Skip browsing link */}
+              <button
+                onClick={handleFinish}
+                className="w-full text-center text-[14px] text-[#8C8680] hover:text-[#2D2A26] transition-colors mt-6 py-2"
+              >
+                Skip — I&apos;ll browse later
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SwipeCardContent({ dish }: { dish: Dish }) {
+  const bg = CUISINE_HEX[dish.cuisine] || '#F5F0EA'
+  return (
+    <div className="h-full flex flex-col">
+      <div className="h-36 flex items-center justify-center relative" style={{ background: bg }}>
+        <span className="text-7xl opacity-30">{CUISINE_EMOJI[dish.cuisine]}</span>
+        <div
+          className="absolute top-3 right-3 w-6 h-6 rounded border-2 flex items-center justify-center"
+          style={{ borderColor: dish.is_veg ? '#2E7D32' : '#C62828' }}
+        >
+          <div className="w-3 h-3 rounded-full" style={{ background: dish.is_veg ? '#2E7D32' : '#C62828' }} />
+        </div>
+      </div>
+      <div className="flex-1 p-5 flex flex-col">
+        <h2 className="text-[20px] font-bold text-[#2D2A26] mb-1">{dish.name_en}</h2>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="px-2.5 py-1 rounded-full text-[12px] font-semibold" style={{ background: bg, color: '#2D2A26' }}>
+            {CUISINE_EMOJI[dish.cuisine]} {CUISINE_LABELS[dish.cuisine]}
+          </span>
+          <span className="text-[13px] text-[#8C8680]">{dish.difficulty}</span>
+        </div>
+        {dish.description_en && (
+          <p className="text-[13px] text-[#8C8680] leading-relaxed line-clamp-2 mb-3">{dish.description_en}</p>
+        )}
+        <div className="mt-auto grid grid-cols-4 gap-2 pt-3 border-t border-[#E5DFD6]">
+          <div className="text-center">
+            <div className="text-[15px] font-bold text-[#E07B39]">{dish.calories ?? '—'}</div>
+            <div className="text-[10px] text-[#8C8680]">Cal</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[15px] font-bold text-[#D84315]">{dish.protein_g ?? '—'}{dish.protein_g ? 'g' : ''}</div>
+            <div className="text-[10px] text-[#8C8680]">Protein</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[15px] font-bold text-[#C49A2B]">{dish.carbs_g ?? '—'}{dish.carbs_g ? 'g' : ''}</div>
+            <div className="text-[10px] text-[#8C8680]">Carbs</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[15px] font-bold text-[#1E3A5F]">{dish.fat_g ?? '—'}{dish.fat_g ? 'g' : ''}</div>
+            <div className="text-[10px] text-[#8C8680]">Fat</div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

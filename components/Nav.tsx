@@ -6,6 +6,7 @@ import { useAuth } from './AuthProvider'
 
 const links = [
   { href: '/', label: 'Home', icon: '🏠' },
+  { href: '/browse', label: 'Browse', icon: '🍽️' },
   { href: '/inventory', label: 'Pantry', icon: '🫙' },
   { href: '/settings', label: 'Settings', icon: '⚙️' },
 ]
