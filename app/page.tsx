@@ -49,13 +49,27 @@ const DIETS = [
 ]
 
 const MENU_ITEMS = [
-  { day: 'Mon', emoji: '🍛', dish: 'Paneer Butter Masala' },
-  { day: 'Tue', emoji: '🍗', dish: 'Chicken Biryani' },
-  { day: 'Wed', emoji: '🫓', dish: 'Chole Bhature' },
-  { day: 'Thu', emoji: '🍲', dish: 'Sambar Vada' },
-  { day: 'Fri', emoji: '🧈', dish: 'Dal Makhani' },
-  { day: 'Sat', emoji: '🥘', dish: 'Mutton Rogan Josh' },
-  { day: 'Sun', emoji: '🍛', dish: 'Rajma Chawal' },
+  { emoji: '🍛', dish: 'Paneer Butter Masala' },
+  { emoji: '🍗', dish: 'Chicken Biryani' },
+  { emoji: '🫓', dish: 'Chole Bhature' },
+  { emoji: '🍲', dish: 'Sambar Rice' },
+  { emoji: '🧈', dish: 'Dal Makhani' },
+  { emoji: '🥘', dish: 'Mutton Rogan Josh' },
+  { emoji: '🍛', dish: 'Rajma Chawal' },
+  { emoji: '🥙', dish: 'Pav Bhaji' },
+  { emoji: '🍗', dish: 'Butter Chicken' },
+  { emoji: '🫓', dish: 'Masala Dosa' },
+  { emoji: '🧈', dish: 'Palak Paneer' },
+  { emoji: '🥘', dish: 'Egg Curry' },
+  { emoji: '🍲', dish: 'Kadhi Pakora' },
+  { emoji: '🐟', dish: 'Fish Curry' },
+  { emoji: '🫓', dish: 'Aloo Paratha' },
+  { emoji: '🧈', dish: 'Malai Kofta' },
+  { emoji: '🍗', dish: 'Tandoori Chicken' },
+  { emoji: '🍛', dish: 'Dal Baati Churma' },
+  { emoji: '🦐', dish: 'Goan Prawn Curry' },
+  { emoji: '🍲', dish: 'Misal Pav' },
+  { emoji: '🍛', dish: 'Litti Chokha' },
 ]
 
 export default async function LandingPage() {
@@ -122,13 +136,12 @@ export default async function LandingPage() {
             <div className="absolute top-0 left-0 right-0 h-5 bg-gradient-to-b from-[#FFFDF9] to-transparent z-10 pointer-events-none" />
             {/* Bottom gradient mask */}
             <div className="absolute bottom-0 left-0 right-0 h-5 bg-gradient-to-t from-[#FFFDF9] to-transparent z-10 pointer-events-none" />
-            {/* Scrolling strip */}
+            {/* Scrolling strip — duplicated for seamless loop */}
             <div className="animate-slot-scroll">
-              {MENU_ITEMS.map((item) => (
-                <div key={item.day} className="h-[80px] flex items-center justify-center gap-3 px-4 sm:px-6">
-                  <span className="text-[13px] font-semibold text-[#C5C0BA] tracking-wide uppercase w-8 sm:w-10 text-right">{item.day}</span>
+              {[...MENU_ITEMS, ...MENU_ITEMS].map((item, i) => (
+                <div key={`${item.dish}-${i}`} className="h-[80px] flex items-center justify-center gap-3 px-4 sm:px-6">
                   <span className="text-[28px] sm:text-[32px]">{item.emoji}</span>
-                  <span className="text-[16px] sm:text-[19px] font-bold text-[#2D2A26] text-left">{item.dish}</span>
+                  <span className="text-[16px] sm:text-[19px] font-bold text-[#2D2A26]">{item.dish}</span>
                 </div>
               ))}
             </div>
