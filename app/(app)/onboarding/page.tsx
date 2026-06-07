@@ -9,6 +9,7 @@ import {
   CUISINE_LABELS, CUISINE_EMOJI, CUISINE_HEX,
   type CuisineType, type Dish,
 } from '@/lib/types'
+import { InstallPrompt } from '@/components/InstallPrompt'
 
 const CUISINES: CuisineType[] = ['tamil', 'north', 'marathi', 'bihari', 'gujarati', 'bengali', 'kerala', 'andhra', 'goan', 'rajasthani', 'punjabi', 'kashmiri', 'cafe']
 
@@ -40,6 +41,7 @@ export default function OnboardingPage() {
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [nudgeDismissed, setNudgeDismissed] = useState(false)
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const startX = useRef(0)
 
   useEffect(() => {
@@ -215,7 +217,8 @@ export default function OnboardingPage() {
         .select('id')
         .single()
       if (data) setHouseholdId(data.id)
-      window.location.href = '/'
+      setShowInstallPrompt(true)
+      setTimeout(() => { window.location.href = '/dashboard' }, 6000)
       return
     }
 
@@ -225,7 +228,8 @@ export default function OnboardingPage() {
       onboarding_done: true,
     }).eq('id', hhId)
     setSaving(false)
-    router.push('/')
+    setShowInstallPrompt(true)
+    setTimeout(() => { router.push('/dashboard') }, 6000)
   }
 
   const rotation = dragX * 0.05
@@ -415,6 +419,33 @@ export default function OnboardingPage() {
           <h1 className="text-[28px] font-bold text-[#2D2A26] mb-1">Discover dishes</h1>
           <p className="text-[#8C8680] text-[15px] mb-4">Swipe right on dishes you like. We&apos;ll remember your favourites.</p>
 
+          {/* Nudge after 10 swipes — shown at top */}
+          {currentIndex >= 10 && !nudgeDismissed && currentDish && (
+            <div className="card p-4 mb-4" style={{ animation: 'fadeInUp 0.4s cubic-bezier(0.16,1,0.3,1) both' }}>
+              <p className="text-[15px] font-semibold text-[#2D2A26] mb-1">
+                {liked.length > 0 ? `Nice — ${liked.length} dish${liked.length !== 1 ? 'es' : ''} liked!` : "You've seen a bunch!"}
+              </p>
+              <p className="text-[13px] text-[#8C8680] mb-3">
+                You can keep swiping or jump straight to planning your menu.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleFinish}
+                  disabled={saving}
+                  className="flex-1 bg-[#2D2A26] text-white py-3 rounded-xl font-semibold text-[14px] hover:bg-[#45403A] transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Setting up...' : 'Plan Menu'}
+                </button>
+                <button
+                  onClick={() => setNudgeDismissed(true)}
+                  className="px-4 py-3 rounded-xl bg-[#F5F0EA] text-[#8C8680] text-[14px] font-medium hover:bg-[#E5DFD6] transition-colors"
+                >
+                  Keep Swiping
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Liked dishes strip */}
           {likedDishes.length > 0 && (
             <div className="mb-4 overflow-hidden">
@@ -538,33 +569,6 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {/* Nudge after 10 swipes */}
-              {currentIndex >= 10 && !nudgeDismissed && (
-                <div className="card p-5 mt-5" style={{ animation: 'fadeInUp 0.4s cubic-bezier(0.16,1,0.3,1) both' }}>
-                  <p className="text-[15px] font-semibold text-[#2D2A26] mb-1">
-                    {liked.length > 0 ? `Nice — ${liked.length} dish${liked.length !== 1 ? 'es' : ''} liked!` : "You've seen a bunch!"}
-                  </p>
-                  <p className="text-[13px] text-[#8C8680] mb-4">
-                    You can keep swiping or jump straight to planning your menu.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleFinish}
-                      disabled={saving}
-                      className="flex-1 bg-[#2D2A26] text-white py-3 rounded-xl font-semibold text-[14px] hover:bg-[#45403A] transition-colors disabled:opacity-50"
-                    >
-                      {saving ? 'Setting up...' : 'Plan Menu'}
-                    </button>
-                    <button
-                      onClick={() => setNudgeDismissed(true)}
-                      className="px-4 py-3 rounded-xl bg-[#F5F0EA] text-[#8C8680] text-[14px] font-medium hover:bg-[#E5DFD6] transition-colors"
-                    >
-                      Keep Swiping
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Skip browsing link */}
               {currentIndex < 10 && (
                 <button
@@ -578,6 +582,7 @@ export default function OnboardingPage() {
           )}
         </div>
       )}
+      <InstallPrompt show={showInstallPrompt} />
     </div>
   )
 }

@@ -43,7 +43,7 @@ function LoginForm() {
         document.cookie = `akb_test_mode=true; path=/; max-age=${60*60*24*365}; samesite=lax${secure}`
       }
 
-      const next = searchParams.get('next') || '/onboarding'
+      const next = searchParams.get('next') || (data.onboarding_done ? '/dashboard' : '/onboarding')
       window.location.href = next
     } catch {
       setError('Network error. Please check your connection.')
@@ -51,8 +51,29 @@ function LoginForm() {
     }
   }
 
-  function handleGoogleLogin() {
-    setError('Google login is not configured yet. Use the name + email form above for now.')
+  async function handleGoogleLogin() {
+    setLoading(true)
+    try {
+      const { createSupabaseBrowser } = await import('@/lib/supabase-browser')
+      const supabase = createSupabaseBrowser()
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      })
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+      }
+    } catch {
+      setError('Could not connect to Google. Try the form above.')
+      setLoading(false)
+    }
   }
 
   return (

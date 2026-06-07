@@ -29,18 +29,22 @@ export async function middleware(request: NextRequest) {
   const isTestMode = request.cookies.get('akb_test_mode')?.value === 'true'
   const hasHousehold = !!request.cookies.get('akb_household')?.value
 
+  // Public paths that don't require auth
   const publicPaths = ['/login', '/cook/', '/auth/callback', '/api/', '/join/', '/onboarding', '/privacy', '/terms']
   const isPublic = publicPaths.some(p => request.nextUrl.pathname.startsWith(p))
 
+  // Landing page is always public (SSR for SEO)
+  const isLanding = request.nextUrl.pathname === '/'
+
   // Allow through if: authenticated, test-mode, public path, or landing page
-  if (!user && !isTestMode && !isPublic && request.nextUrl.pathname !== '/') {
+  if (!user && !isTestMode && !isPublic && !isLanding) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
   // Redirect authenticated users without a household to onboarding
-  if (user && !isPublic && request.nextUrl.pathname !== '/' && request.nextUrl.pathname !== '/onboarding') {
+  if (user && !isPublic && !isLanding && request.nextUrl.pathname !== '/onboarding') {
     try {
       const { data: household } = await supabase
         .from('households')

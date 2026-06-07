@@ -1,192 +1,296 @@
-'use client'
-
-import { useEffect, useState, useCallback } from 'react'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { createServerClient } from '@supabase/ssr'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
-import { ensureHousehold, getHouseholdId } from '@/lib/household'
-import { getMonday, formatDate, formatDateDisplay, getWeekLabel, shiftWeekStart } from '@/lib/dates'
-import type { WeeklyMenu, MenuItem } from '@/lib/types'
-import { CUISINE_LABELS, DAY_NAMES, MEAL_EMOJI } from '@/lib/types'
-import { useAuth } from '@/components/AuthProvider'
-import Image from 'next/image'
-import LandingV1 from '@/components/LandingV1'
 
-const CUISINE_BG: Record<string, string> = {
-  tamil: '#E8D5C4', north: '#F5E6CC', marathi: '#D4E8D4', bihari: '#E8DCC8',
-  gujarati: '#F5E8D0', bengali: '#E8D4D4', kerala: '#C8E8D4', andhra: '#E8D0C4',
-  goan: '#D4D8E8', rajasthani: '#E8E0C8', punjabi: '#F0E4CC', kashmiri: '#D8D4E8',
-  cafe: '#C8E6C9',
-}
+const FEATURES = [
+  {
+    num: '01',
+    title: 'Your weekly menu, sorted',
+    desc: 'Pick your favourite cuisines, set how many veg and non-veg days you want, and get a balanced weekly menu — breakfast, lunch, and dinner. 216 dishes across 13 cuisines.',
+    accent: '#E8D5C4',
+    icon: '📋',
+  },
+  {
+    num: '02',
+    title: 'Share recipes with your cook',
+    desc: "Send your cook a single link. They see today's recipe in Hindi or Marathi — ingredients, quantities, step-by-step instructions — in large, clear text. No app download needed.",
+    accent: '#D4E8D4',
+    icon: '🗣️',
+  },
+  {
+    num: '03',
+    title: 'Smart shopping list',
+    desc: "The app tracks what's already in your pantry and builds a day-wise shopping list with only what you need to buy. No more forgetting jeera or buying double the onions.",
+    accent: '#F5E6CC',
+    icon: '🛒',
+  },
+]
 
-function Dashboard() {
-  const [menu, setMenu] = useState<WeeklyMenu | null>(null)
-  const [items, setItems] = useState<MenuItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-  const [weekStart, setWeekStart] = useState(() => formatDate(getMonday()))
+const CUISINES = [
+  '🥥 Tamil', '🫓 North Indian', '🌶 Marathi', '🫘 Bihari', '🫙 Gujarati', '🐟 Bengali',
+  '🌴 Kerala', '🔥 Andhra', '🦐 Goan', '🏜️ Rajasthani', '🧈 Punjabi', '🏔️ Kashmiri', '🥑 Café',
+]
 
-  const loadMenu = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(false)
-      await ensureHousehold()
-      const householdId = getHouseholdId()
-      if (!householdId) { setLoading(false); return }
+const STEPS = [
+  { step: '1', text: 'Pick your cuisines and set veg/non-veg days', sub: 'Tamil, North Indian, Marathi... choose any combination' },
+  { step: '2', text: 'Get a balanced weekly menu', sub: 'Variety-optimized — no repeats, proper nutrition' },
+  { step: '3', text: 'Swap dishes, get approval from flatmates', sub: 'Everyone votes before the menu is locked in' },
+  { step: '4', text: 'Share one link with your cook', sub: 'Recipes in Hindi or Marathi, no app needed' },
+]
 
-      const { data: menus } = await supabase
-        .from('weekly_menus')
-        .select('*, menu_items:menu_items(*, dish:dishes(*))')
-        .eq('household_id', householdId)
-        .eq('week_start_date', weekStart)
-        .order('created_at', { ascending: false })
-        .limit(1)
+const DIETS = [
+  { name: 'Regular', desc: 'Balanced meals' },
+  { name: 'High Protein', desc: '30g+ per meal' },
+  { name: 'Keto', desc: 'High fat, very low carb' },
+  { name: 'Low Carb', desc: 'Under 100g carbs/day' },
+  { name: 'Cutting', desc: 'Low cal, high protein' },
+  { name: 'Bulking', desc: 'Calorie surplus' },
+]
 
-      if (menus && menus.length > 0) {
-        const m = menus[0]
-        setMenu(m)
-        setItems(m.menu_items || [])
-      } else {
-        setMenu(null)
-        setItems([])
-      }
-      setLoading(false)
-    } catch {
-      setError(true)
-      setLoading(false)
-    }
-  }, [weekStart])
+export default async function LandingPage() {
+  const cookieStore = await cookies()
+  const isTestMode = cookieStore.get('akb_test_mode')?.value === 'true'
 
-  useEffect(() => { loadMenu() }, [loadMenu])
-
-  function shiftWeek(delta: number) {
-    setWeekStart(shiftWeekStart(weekStart, delta))
+  if (isTestMode) {
+    redirect('/dashboard')
   }
 
-  const vegCount = items.filter(i => i.dish?.is_veg).length
-  const nvCount = items.filter(i => i.dish && !i.dish.is_veg).length
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll() },
+          setAll() {},
+        },
+      }
+    )
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      redirect('/dashboard')
+    }
+  } catch {
+    // Auth check failed — show landing page
+  }
 
   return (
-    <div className="py-6">
-      <div className="flex items-center justify-between mb-10">
-        <button onClick={() => shiftWeek(-1)} className="w-11 h-11 rounded-full flex items-center justify-center hover:bg-white text-[#8C8680] transition-colors" aria-label="Previous week">
-          <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-        <div className="text-center">
-          <p className="text-[15px] text-[#8C8680] mb-0.5">Week of</p>
-          <p className="text-xl font-semibold text-[#2D2A26]">{getWeekLabel(weekStart)}</p>
-        </div>
-        <button onClick={() => shiftWeek(1)} className="w-11 h-11 rounded-full flex items-center justify-center hover:bg-white text-[#8C8680] transition-colors" aria-label="Next week">
-          <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-      </div>
-
-      {error ? (
-        <div className="card p-8 text-center">
-          <p className="text-[17px] font-semibold text-[#2D2A26] mb-4">Couldn&apos;t load your menu</p>
-          <button
-            onClick={() => loadMenu()}
-            className="bg-[#2D2A26] text-white px-6 py-3 rounded-xl font-medium text-[15px] hover:bg-[#45403A] transition-colors"
+    <div className="mx-auto max-w-[680px] px-5 overflow-hidden">
+      {/* Nav */}
+      <nav className="flex items-center justify-between py-4">
+        <span className="text-[22px] sm:text-[28px] font-extrabold tracking-tight text-[#2D2A26] leading-none">
+          आज क्या बनेगा?
+        </span>
+        <div className="flex items-center gap-3">
+          <span className="px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] sm:text-[11px] font-bold tracking-wide uppercase">
+            Beta
+          </span>
+          <Link
+            href="/login"
+            className="px-4 py-2 rounded-xl bg-[#2D2A26] text-white text-sm font-semibold hover:bg-[#45403A] transition-colors"
           >
-            Try again
-          </button>
+            Sign in
+          </Link>
         </div>
-      ) : loading ? (
-        <div className="space-y-4">
-          {[1,2,3].map(i => (
-            <div key={i} className="card p-5 animate-pulse">
-              <div className="flex gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-[#F5F0EA]" />
-                <div className="flex-1 space-y-2 py-1">
-                  <div className="h-3 w-20 rounded bg-[#F5F0EA]" />
-                  <div className="h-4 w-40 rounded bg-[#F5F0EA]" />
-                  <div className="h-3 w-28 rounded bg-[#F5F0EA]" />
+      </nav>
+
+      {/* Hero */}
+      <section className="text-center pt-8 pb-12">
+        <h1 className="text-[32px] sm:text-[36px] font-extrabold text-[#2D2A26] leading-tight mb-3 tracking-tight">
+          Your cook asks.<br />
+          <span className="text-[#8C8680]">You&apos;re ready.</span>
+        </h1>
+        <p className="text-[16px] sm:text-[17px] text-[#8C8680] leading-relaxed max-w-sm mx-auto mb-8 px-2">
+          Plan meals for the week. Share recipes with your cook in Hindi or Marathi. No app needed.
+        </p>
+
+        {/* WhatsApp mockup */}
+        <div
+          className="mx-auto rounded-2xl overflow-hidden shadow-2xl border border-[#D1D7DB]/50"
+          style={{ maxWidth: '100%', width: '400px' }}
+        >
+          <div className="flex items-center gap-3 px-4 py-3" style={{ background: '#075E54' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            <div className="w-10 h-10 rounded-full bg-[#DFE5E7] flex items-center justify-center text-[16px]">👩‍🍳</div>
+            <div className="text-left">
+              <div className="text-white text-[16px] font-medium leading-tight">Didi (Cook)</div>
+              <div className="text-[12px] leading-tight" style={{ color: '#8EBDB6' }}>online</div>
+            </div>
+          </div>
+          <div className="px-4 py-4 space-y-2" style={{ background: '#ECE5DD' }}>
+            <div className="flex justify-center mb-1">
+              <span className="px-3 py-1 rounded-lg text-[11px] font-medium shadow-sm" style={{ background: '#E1F2FA', color: '#5B7A84' }}>TODAY</span>
+            </div>
+            <div className="flex justify-start">
+              <div className="relative rounded-lg rounded-tl-sm px-4 py-2 shadow-sm" style={{ background: '#FFFFFF', maxWidth: '80%' }}>
+                <p className="text-[15px] sm:text-[18px] text-[#111B21] font-medium">aaj kya banaun? 🍳</p>
+                <div className="flex items-center justify-end gap-1 -mb-0.5">
+                  <span className="text-[11px]" style={{ color: '#667781' }}>6:32 pm</span>
                 </div>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <div className="relative rounded-lg rounded-tr-sm px-4 py-2 shadow-sm" style={{ background: '#D9FDD3', maxWidth: '85%' }}>
+                <p className="text-[15px] sm:text-[18px] text-[#111B21] font-medium">ek second didi, bhej rahi hun 📋</p>
+                <div className="flex items-center justify-end gap-1 -mb-0.5">
+                  <span className="text-[11px]" style={{ color: '#667781' }}>6:32 pm</span>
+                  <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M11.07 0.73L4.53 7.27L1.77 4.51L0.36 5.93L4.53 10.1L12.48 2.15L11.07 0.73Z" fill="#53BDEB"/><path d="M14.07 0.73L7.53 7.27L6.83 6.57L5.42 7.98L7.53 10.1L15.48 2.15L14.07 0.73Z" fill="#53BDEB"/></svg>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <div className="relative rounded-lg rounded-tr-sm shadow-sm overflow-hidden" style={{ background: '#D9FDD3', maxWidth: '85%' }}>
+                <div className="px-3 py-2" style={{ background: '#E2F7CB' }}>
+                  <p className="text-[11px] font-medium" style={{ color: '#5B7A3D' }}>aajbanega.com</p>
+                  <p className="text-[14px] text-[#111B21] font-semibold mt-0.5">Today&apos;s Menu — Paneer Butter Masala</p>
+                  <p className="text-[12px] text-[#667781] mt-0.5">Step-by-step recipe in Hindi</p>
+                </div>
+                <div className="px-4 py-1.5 flex items-center justify-end gap-1">
+                  <span className="text-[11px]" style={{ color: '#667781' }}>6:33 pm</span>
+                  <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M11.07 0.73L4.53 7.27L1.77 4.51L0.36 5.93L4.53 10.1L12.48 2.15L11.07 0.73Z" fill="#53BDEB"/><path d="M14.07 0.73L7.53 7.27L6.83 6.57L5.42 7.98L7.53 10.1L15.48 2.15L14.07 0.73Z" fill="#53BDEB"/></svg>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-start">
+              <div className="relative rounded-lg rounded-tl-sm px-4 py-2 shadow-sm" style={{ background: '#FFFFFF', maxWidth: '80%' }}>
+                <p className="text-[15px] sm:text-[18px] text-[#111B21]">theek hai, shuru karti hun 👍</p>
+                <div className="flex items-center justify-end gap-1 -mb-0.5">
+                  <span className="text-[11px]" style={{ color: '#667781' }}>6:34 pm</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 sm:gap-4 mt-8 mb-8 flex-wrap">
+          <span className="px-3 sm:px-4 py-2 rounded-full bg-white text-[13px] sm:text-[14px] font-semibold text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50">
+            🍛 216 dishes
+          </span>
+          <span className="px-3 sm:px-4 py-2 rounded-full bg-white text-[13px] sm:text-[14px] font-semibold text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50">
+            🌍 13 cuisines
+          </span>
+          <span className="px-3 sm:px-4 py-2 rounded-full bg-white text-[13px] sm:text-[14px] font-semibold text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50">
+            🗣️ 3 languages
+          </span>
+        </div>
+
+        <Link
+          href="/login"
+          className="inline-block bg-[#2D2A26] text-white px-12 py-4 rounded-2xl font-bold text-[19px] hover:bg-[#45403A] transition-all shadow-xl"
+        >
+          Start Planning
+        </Link>
+        <p className="text-[13px] text-[#C5C0BA] mt-4">Free. No downloads. Works on any phone.</p>
+      </section>
+
+      {/* Feature cards */}
+      <section className="py-8">
+        <div className="space-y-6">
+          {FEATURES.map((f) => (
+            <div
+              key={f.num}
+              className="rounded-3xl p-6 sm:p-8 shadow-lg border border-white/60"
+              style={{ background: f.accent, minHeight: '220px' }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <span className="text-[13px] font-bold text-[#2D2A26]/40 tracking-widest uppercase">{f.num}</span>
+                <span className="text-3xl sm:text-4xl">{f.icon}</span>
+              </div>
+              <h3 className="text-[24px] sm:text-[28px] font-extrabold text-[#2D2A26] leading-tight mb-3">{f.title}</h3>
+              <p className="text-[15px] sm:text-[16px] text-[#2D2A26]/70 leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Plan together */}
+      <section className="py-12">
+        <h2 className="text-[24px] sm:text-[28px] font-extrabold text-[#2D2A26] text-center leading-tight mb-4">
+          Plan together with<br />flatmates &amp; family
+        </h2>
+        <p className="text-[16px] text-[#8C8680] text-center max-w-sm mx-auto mb-10 leading-relaxed">
+          Everyone gets a say in what&apos;s for dinner. No more WhatsApp polls.
+        </p>
+        <div className="space-y-4">
+          {[
+            { icon: '👥', title: 'Invite your household', desc: 'Add flatmates or family members with a WhatsApp invite link. Each person joins your shared household in seconds.' },
+            { icon: '✅', title: 'Vote on the menu', desc: 'After the menu is generated, each flatmate gets a link to review and approve. The menu finalizes only when everyone says yes.' },
+            { icon: '🔄', title: "Swap dishes you don't like", desc: "Not feeling Palak Paneer on Wednesday? Swap it for something else from the same cuisine. Everyone sees the updated menu in real-time." },
+          ].map((item) => (
+            <div key={item.title} className="bg-[#FFFDF9] rounded-2xl p-6 border border-[#E5DFD6]/50 shadow-sm">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="w-10 h-10 rounded-full bg-[#F5F0EA] flex items-center justify-center text-lg">{item.icon}</div>
+                <h3 className="font-bold text-[17px] text-[#2D2A26]">{item.title}</h3>
+              </div>
+              <p className="text-[15px] text-[#8C8680] leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="py-10">
+        <h2 className="text-[22px] font-bold text-[#2D2A26] mb-8 text-center">How it works</h2>
+        <div className="space-y-5">
+          {STEPS.map((s) => (
+            <div key={s.step} className="flex gap-5 items-start">
+              <div className="w-11 h-11 rounded-2xl bg-[#2D2A26] text-white flex items-center justify-center font-bold text-[16px] flex-shrink-0 shadow-md">
+                {s.step}
+              </div>
+              <div>
+                <p className="text-[16px] font-semibold text-[#2D2A26]">{s.text}</p>
+                <p className="text-[14px] text-[#8C8680] mt-0.5">{s.sub}</p>
               </div>
             </div>
           ))}
         </div>
-      ) : menu ? (
-        <div>
-          <div className="flex gap-2 mb-6 flex-wrap">
-            <span className="px-4 py-1.5 rounded-full bg-white text-[15px] font-medium shadow">
-              <span className="text-[#2E7D32]">{vegCount} veg</span>
-              <span className="text-[#C5C0BA] mx-1.5">/</span>
-              <span className="text-[#C62828]">{nvCount} non-veg</span>
+      </section>
+
+      {/* Cuisines */}
+      <section className="py-10">
+        <h2 className="text-[22px] font-bold text-[#2D2A26] mb-6 text-center">13 cuisines, one app</h2>
+        <div className="flex flex-wrap gap-2 justify-center">
+          {CUISINES.map((c) => (
+            <span key={c} className="px-4 py-2 rounded-full bg-white text-[14px] font-medium text-[#2D2A26] shadow-sm border border-[#E5DFD6]/50">
+              {c}
             </span>
-            {menu.is_finalized && (
-              <span className="px-4 py-1.5 rounded-full bg-[#2D2A26] text-white text-[15px] font-medium">Finalized</span>
-            )}
-          </div>
-
-          <div className="space-y-3 mb-8">
-            {items.map(item => {
-              const dish = item.dish
-              if (!dish) return null
-              const bg = CUISINE_BG[dish.cuisine] || '#F5F5F5'
-              return (
-                <Link key={item.id} href={`/menu/${menu.id}`} className="card p-4 flex gap-4 block">
-                  <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden" style={{ backgroundColor: bg }}>
-                    {dish.illustration_url ? (
-                      <Image src={dish.illustration_url} alt={dish.name_en} width={64} height={64} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="w-full h-full flex items-center justify-center text-2xl font-bold opacity-20">{dish.name_en.charAt(0)}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0 py-0.5">
-                    <p className="text-[13px] text-[#8C8680]">
-                      {DAY_NAMES[item.day_of_week]}, {formatDateDisplay(item.date)}
-                      {item.meal_type && item.meal_type !== 'dinner' && ` ${MEAL_EMOJI[item.meal_type as keyof typeof MEAL_EMOJI]}`}
-                    </p>
-                    <p className="font-semibold text-[17px] text-[#2D2A26] truncate mt-0.5">{dish.name_en}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="px-2 py-0.5 rounded-full text-[12px] font-medium" style={{ backgroundColor: bg }}>
-                        {CUISINE_LABELS[dish.cuisine]}
-                      </span>
-                      <span className={`w-2 h-2 rounded-full ${dish.is_veg ? 'bg-[#2E7D32]' : 'bg-[#C62828]'}`} />
-                      <span className="text-[13px] text-[#8C8680] ml-auto">{dish.calories} cal</span>
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-
-          <Link
-            href={`/menu/${menu.id}`}
-            className="block w-full text-center bg-[#2D2A26] text-white py-4 rounded-2xl font-semibold text-[17px] hover:bg-[#45403A] transition-colors shadow"
-          >
-            View Full Menu
-          </Link>
+          ))}
         </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-7xl mb-6">🍛</div>
-          <h2 className="text-3xl font-bold text-[#2D2A26] mb-3">No menu yet</h2>
-          <p className="text-[#8C8680] mb-10 max-w-sm mx-auto text-lg leading-relaxed">
-            Plan this week's meals — pick cuisines, set veg/non-veg split, and get a balanced menu.
-          </p>
-          <Link
-            href={`/plan?week=${weekStart}`}
-            className="inline-block bg-[#2D2A26] text-white px-10 py-4 rounded-2xl font-semibold text-[17px] hover:bg-[#45403A] transition-colors shadow"
-          >
-            Plan This Week's Menu
-          </Link>
+      </section>
+
+      {/* Diets */}
+      <section className="py-10">
+        <h2 className="text-[22px] font-bold text-[#2D2A26] mb-6 text-center">Works with your diet</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {DIETS.map((d) => (
+            <div key={d.name} className="p-4 rounded-xl bg-[#FFFDF9] border border-[#E5DFD6]/50 shadow-sm">
+              <div className="font-semibold text-[15px] text-[#2D2A26]">{d.name}</div>
+              <div className="text-[13px] text-[#8C8680] mt-0.5">{d.desc}</div>
+            </div>
+          ))}
         </div>
-      )}
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="text-center py-16">
+        <p className="text-[15px] text-[#8C8680] mb-6">
+          No more &ldquo;aaj kya banayein?&rdquo; every morning.
+        </p>
+        <Link
+          href="/login"
+          className="inline-block bg-[#2D2A26] text-white px-10 py-4 rounded-2xl font-semibold text-[18px] hover:bg-[#45403A] transition-all shadow-lg"
+        >
+          Start Planning
+        </Link>
+        <p className="text-[13px] text-[#C5C0BA] mt-4">No credit card. No downloads. Works on any phone.</p>
+      </section>
+
+      {/* Footer */}
+      <footer className="pt-6 border-t border-[#E5DFD6] flex justify-center gap-6 text-[13px] text-[#C5C0BA] pb-8">
+        <Link href="/privacy" className="hover:text-[#2D2A26] transition-colors">Privacy</Link>
+        <Link href="/terms" className="hover:text-[#2D2A26] transition-colors">Terms</Link>
+      </footer>
     </div>
   )
-}
-
-export default function Home() {
-  const { user, isTestMode, loading } = useAuth()
-
-  if (loading) {
-    return (
-      <div className="py-20 flex justify-center">
-        <div className="w-8 h-8 border-3 border-[#2D2A26] border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  return (user || isTestMode) ? <Dashboard /> : <LandingV1 />
 }

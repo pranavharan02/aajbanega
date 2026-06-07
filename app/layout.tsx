@@ -1,10 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { DM_Sans } from "next/font/google"
 import "./globals.css"
-import { Nav } from "@/components/Nav"
-import { ToastContainer } from "@/components/Toast"
-import { AuthProvider } from "@/components/AuthProvider"
-import { ServiceWorkerRegistration } from "@/components/ServiceWorker"
 import { Suspense } from "react"
 import { PostHogProvider } from "@/components/PostHog"
 import { Analytics } from "@vercel/analytics/next"
@@ -16,7 +12,10 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  title: "आज क्या बनेगा? — Weekly Meal Planner for Indian Households",
+  title: {
+    default: "आज क्या बनेगा? — Weekly Meal Planner for Indian Households",
+    template: "%s | आज क्या बनेगा?",
+  },
   description: "Plan meals for the week. Share with your cook. In their language. AI-powered menus across 12 Indian cuisines with recipes in Hindi & Marathi.",
   keywords: ["weekly meal planner India", "recipe app for cook", "cook recipe sharing app Hindi", "meal planning app", "Indian meal planner", "Hindi recipe app"],
   metadataBase: new URL('https://aajbanega.com'),
@@ -42,8 +41,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
 }
 
 export default function RootLayout({
@@ -56,18 +54,12 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#2D2A26" />
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body className="min-h-screen font-[var(--font-dm-sans)]" style={{ background: '#F5F0EA' }}>
-        <AuthProvider>
-          <div className="mx-auto max-w-[680px] px-5 pb-24">
-            <Nav />
-            {children}
-          </div>
-          <ToastContainer />
-          <ServiceWorkerRegistration />
-          <Suspense fallback={null}><PostHogProvider /></Suspense>
-        </AuthProvider>
+        {children}
+        <Suspense fallback={null}><PostHogProvider /></Suspense>
         <Analytics />
       </body>
     </html>

@@ -64,7 +64,7 @@ export default function JoinPage() {
     if (memberErr) {
       if (memberErr.code === '23505') {
         setHouseholdId(household.id)
-        router.push('/')
+        router.push('/dashboard')
         return
       }
       setError(memberErr.message)
@@ -73,7 +73,7 @@ export default function JoinPage() {
     }
 
     setHouseholdId(household.id)
-    router.push('/')
+    router.push('/dashboard')
   }
 
   if (loading || authLoading) {
