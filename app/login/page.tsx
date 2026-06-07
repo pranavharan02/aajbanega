@@ -12,10 +12,14 @@ function LoginForm() {
   const [email, setEmail] = useState('')
 
   useEffect(() => {
-    // Clear any stale test-mode cookies so the user starts fresh
-    document.cookie = 'akb_test_mode=; path=/; max-age=0'
-    document.cookie = 'akb_household=; path=/; max-age=0'
-  }, [])
+    // Show auth error from callback redirect
+    const err = searchParams.get('error')
+    if (err && err !== 'auth') {
+      setError(decodeURIComponent(err))
+    } else if (err === 'auth') {
+      setError('Sign in failed. Please try again.')
+    }
+  }, [searchParams])
 
   async function handleTestLogin(e: React.FormEvent) {
     e.preventDefault()

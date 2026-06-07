@@ -20,14 +20,17 @@ const DISH_NAMES: Record<string, string> = {
 const ITEM_H = 72
 const COPIES = 5
 const SPIN_ITEMS = 30 // spin through ~30 items before landing
+const SPIN_DURATION = 2900 // longest reel (1.8 + 2*0.4)*1000 + 300
+const PAUSE_BETWEEN = 4000 // pause showing result before next spin
 
 export function SlotMachine() {
   const [spinning, setSpinning] = useState(false)
   const [isJackpot, setIsJackpot] = useState(false)
-  const [dishName, setDishName] = useState('Paneer Butter Masala')
+  const [dishName, setDishName] = useState('')
   const [leverPulled, setLeverPulled] = useState(false)
   const [glowing, setGlowing] = useState(false)
 
+  const spinningRef = useRef(false)
   const prevTargets = useRef([0, 0, 0])
   const reel0 = useRef<HTMLDivElement>(null)
   const reel1 = useRef<HTMLDivElement>(null)
@@ -35,14 +38,15 @@ export function SlotMachine() {
   const reelRefs = [reel0, reel1, reel2]
 
   const spin = useCallback(() => {
-    if (spinning) return
+    if (spinningRef.current) return
+    spinningRef.current = true
     setSpinning(true)
     setIsJackpot(false)
     setDishName('')
     setLeverPulled(true)
     setGlowing(true)
 
-    // Decide outcome — ~12% jackpot
+    // Decide outcome — ~12% jackpot (all 3 same emoji)
     const jackpot = Math.random() < 0.12
     let targets: number[]
     if (jackpot) {
@@ -86,31 +90,46 @@ export function SlotMachine() {
     // All reels settled
     const longest = (1.8 + 2 * 0.4) * 1000 + 300
     setTimeout(() => {
+      spinningRef.current = false
       setSpinning(false)
-      setDishName(DISH_NAMES[EMOJIS[targets[0]]] || '')
+      const landed = EMOJIS[targets[0]]
+      setDishName(DISH_NAMES[landed] || '')
       if (jackpot) setIsJackpot(true)
     }, longest)
-  }, [spinning])
-
-  // Auto-spin on mount for demo
-  useEffect(() => {
-    const t = setTimeout(spin, 1200)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Build reel strip — COPIES copies of EMOJIS
-  const reelStrip = Array.from({ length: COPIES }).flatMap((_, c) =>
-    EMOJIS.map((emoji, i) => (
-      <div
-        key={`${c}-${i}`}
-        className="flex items-center justify-center text-[36px]"
-        style={{ height: ITEM_H }}
-      >
-        {emoji}
-      </div>
-    ))
-  )
+  // Auto-spin on mount, then repeat after each spin settles + pause
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    function scheduleNext() {
+      // Wait for current spin to finish + pause, then spin again
+      timer = setTimeout(() => {
+        if (!spinningRef.current) spin()
+        scheduleNext()
+      }, SPIN_DURATION + PAUSE_BETWEEN)
+    }
+    // Initial spin after short delay
+    timer = setTimeout(() => {
+      spin()
+      scheduleNext()
+    }, 1200)
+    return () => clearTimeout(timer)
+  }, [spin])
+
+  // Build reel strip — COPIES copies of EMOJIS, unique per reel
+  function buildStrip(reelIdx: number) {
+    return Array.from({ length: COPIES }).flatMap((_, c) =>
+      EMOJIS.map((emoji, i) => (
+        <div
+          key={`r${reelIdx}-${c}-${i}`}
+          className="flex items-center justify-center text-[36px]"
+          style={{ height: ITEM_H }}
+        >
+          {emoji}
+        </div>
+      ))
+    )
+  }
 
   return (
     <>
@@ -184,7 +203,7 @@ export function SlotMachine() {
                 >
                   <div className="absolute top-0 inset-x-0 h-3 bg-gradient-to-b from-[#FFFDF9] to-transparent z-10 pointer-events-none" />
                   <div className="absolute bottom-0 inset-x-0 h-3 bg-gradient-to-t from-[#FFFDF9] to-transparent z-10 pointer-events-none" />
-                  <div ref={ref}>{reelStrip}</div>
+                  <div ref={ref}>{buildStrip(idx)}</div>
                 </div>
               ))}
             </div>
@@ -241,7 +260,7 @@ export function SlotMachine() {
                   className="text-[16px] font-extrabold animate-pulse"
                   style={{ color: '#D4A853' }}
                 >
-                  🎰 JACKPOT! 🎰
+                  🎰 JACKPOT! {dishName} 🎰
                 </span>
               ) : dishName ? (
                 <span
