@@ -443,15 +443,13 @@ export default function OnboardingPage() {
       {/* Step 4: Browse dishes (swipe) */}
       {step === 'browse' && (
         <div>
-          <div className="flex items-start justify-between gap-3 mb-1">
-            <h1 className="text-[28px] font-bold text-[#2D2A26]">Discover dishes</h1>
-            <button
-              onClick={handleSkipBrowse}
-              className="flex-shrink-0 mt-1.5 px-3 py-1.5 rounded-full text-[13px] text-[#8C8680]/70 hover:text-[#2D2A26] hover:bg-[#E5DFD6]/50 transition-all"
-            >
-              Skip →
-            </button>
-          </div>
+          <button
+            onClick={handleSkipBrowse}
+            className="w-full mb-5 py-3 rounded-xl border-2 border-[#E5DFD6] bg-[#FFFDF9] text-[15px] font-semibold text-[#2D2A26] hover:bg-[#F5F0EA] active:scale-[0.98] transition-all"
+          >
+            Skip — I&apos;ll browse later →
+          </button>
+          <h1 className="text-[28px] font-bold text-[#2D2A26] mb-1">Discover dishes</h1>
           <p className="text-[#8C8680] text-[15px] mb-4">Swipe right on dishes you like. We&apos;ll remember your favourites.</p>
 
           {/* Nudge after 10 swipes — shown at top */}
