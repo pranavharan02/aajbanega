@@ -199,6 +199,33 @@ export default function OnboardingPage() {
     }
   }
 
+  async function handleSkipBrowse() {
+    const hhId = householdId
+    if (!hhId) {
+      const { data } = await supabase
+        .from('households')
+        .insert({
+          user_id: user?.id || null,
+          name: name.trim() || 'My Household',
+          default_servings: 2,
+          default_cuisines: selectedCuisines,
+          default_veg_days: 4,
+          preferred_cook_lang: 'hi',
+          default_meals: ['dinner'],
+          onboarding_done: true,
+        })
+        .select('id')
+        .single()
+      if (data) setHouseholdId(data.id)
+    } else {
+      await supabase.from('households').update({
+        default_cuisines: selectedCuisines,
+        onboarding_done: true,
+      }).eq('id', hhId)
+    }
+    window.location.href = '/dashboard'
+  }
+
   async function handleFinish() {
     const hhId = householdId
     if (!hhId) {
@@ -416,7 +443,15 @@ export default function OnboardingPage() {
       {/* Step 4: Browse dishes (swipe) */}
       {step === 'browse' && (
         <div>
-          <h1 className="text-[28px] font-bold text-[#2D2A26] mb-1">Discover dishes</h1>
+          <div className="flex items-start justify-between gap-3 mb-1">
+            <h1 className="text-[28px] font-bold text-[#2D2A26]">Discover dishes</h1>
+            <button
+              onClick={handleSkipBrowse}
+              className="flex-shrink-0 mt-1.5 px-3 py-1.5 rounded-full text-[13px] text-[#8C8680]/70 hover:text-[#2D2A26] hover:bg-[#E5DFD6]/50 transition-all"
+            >
+              Skip →
+            </button>
+          </div>
           <p className="text-[#8C8680] text-[15px] mb-4">Swipe right on dishes you like. We&apos;ll remember your favourites.</p>
 
           {/* Nudge after 10 swipes — shown at top */}
@@ -569,15 +604,7 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {/* Skip browsing link */}
-              {currentIndex < 10 && (
-                <button
-                  onClick={handleFinish}
-                  className="w-full text-center text-[14px] text-[#8C8680] hover:text-[#2D2A26] transition-colors mt-6 py-2"
-                >
-                  Skip — I&apos;ll browse later
-                </button>
-              )}
+              {/* Skip link removed — now at top */}
             </>
           )}
         </div>
